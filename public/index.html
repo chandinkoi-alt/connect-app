@@ -1,91 +1,185 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Công cụ tính lương nhân viên</title>
+  <title>技能実習生・特定技能 管理システム</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <div class="brand">💰 Công cụ tính lương nhân viên</div>
-    <div class="sub-info">Tính lương, bảo hiểm, thuế TNCN theo biểu lũy tiến</div>
+    <div class="brand">技能実習生・特定技能 管理システム</div>
+    <div class="sub-info">在留期限管理・書類作成</div>
   </header>
 
   <main>
+    <section class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">総人数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statGinou">0</div>
+        <div class="stat-label">技能実習生</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statTokutei">0</div>
+        <div class="stat-label">特定技能</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="statWarning">0</div>
+        <div class="stat-label">期限間近（90日以内）</div>
+      </div>
+      <div class="stat-card expired">
+        <div class="stat-value" id="statExpired">0</div>
+        <div class="stat-label">期限切れ</div>
+      </div>
+    </section>
+
     <div class="grid">
       <section class="card">
-        <h2 class="card-title">Nhập thông tin nhân viên</h2>
-        <form id="salaryForm">
+        <h2 class="card-title" id="formTitle">新規登録</h2>
+        <form id="workerForm">
+          <input type="hidden" id="workerId" />
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="name">氏名（ローマ字）*</label>
+              <input type="text" id="name" placeholder="NGUYEN VAN A" required />
+            </div>
+            <div class="form-group">
+              <label for="nameKana">フリガナ</label>
+              <input type="text" id="nameKana" placeholder="グエン ヴァン アー" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="nationality">国籍</label>
+              <input type="text" id="nationality" placeholder="ベトナム" />
+            </div>
+            <div class="form-group">
+              <label for="gender">性別</label>
+              <select id="gender">
+                <option value="">選択してください</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dob">生年月日</label>
+              <input type="date" id="dob" />
+            </div>
+            <div class="form-group">
+              <label for="passportNumber">旅券番号</label>
+              <input type="text" id="passportNumber" placeholder="C12345678" />
+            </div>
+          </div>
+
           <div class="form-group">
-            <label for="name">Họ tên</label>
-            <input type="text" id="name" required placeholder="Nguyễn Văn A" />
+            <label for="residenceCardNumber">在留カード番号</label>
+            <input type="text" id="residenceCardNumber" placeholder="AB12345678CD" />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="baseSalary">Lương cơ bản (VNĐ)</label>
-              <input type="number" id="baseSalary" min="0" required value="10000000" />
+              <label for="visaType">在留資格 *</label>
+              <select id="visaType" required>
+                <option value="">選択してください</option>
+                <option value="技能実習1号">技能実習1号</option>
+                <option value="技能実習2号">技能実習2号</option>
+                <option value="技能実習3号">技能実習3号</option>
+                <option value="特定技能1号">特定技能1号</option>
+                <option value="特定技能2号">特定技能2号</option>
+              </select>
             </div>
             <div class="form-group">
-              <label for="standardDays">Ngày công chuẩn</label>
-              <input type="number" id="standardDays" min="1" required value="26" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="actualDays">Ngày công thực tế</label>
-              <input type="number" id="actualDays" min="0" required value="26" />
-            </div>
-            <div class="form-group">
-              <label for="overtimeHours">Giờ tăng ca</label>
-              <input type="number" id="overtimeHours" min="0" value="0" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="overtimeRate">Hệ số tăng ca</label>
-              <input type="number" id="overtimeRate" min="1" step="0.1" value="1.5" />
-            </div>
-            <div class="form-group">
-              <label for="allowance">Phụ cấp (VNĐ)</label>
-              <input type="number" id="allowance" min="0" value="0" />
+              <label for="visaExpiryDate">在留期限 *</label>
+              <input type="date" id="visaExpiryDate" required />
             </div>
           </div>
 
           <div class="form-group">
-            <label for="dependents">Số người phụ thuộc</label>
-            <input type="number" id="dependents" min="0" value="0" />
+            <label for="entryDate">入国日</label>
+            <input type="date" id="entryDate" />
           </div>
 
-          <button type="submit" class="btn btn-primary">➕ Tính & thêm vào bảng lương</button>
+          <div class="form-group">
+            <label for="companyName">受入企業 *</label>
+            <input type="text" id="companyName" placeholder="株式会社〇〇" required />
+          </div>
+
+          <div class="form-group">
+            <label for="jobCategory">職種・作業</label>
+            <input type="text" id="jobCategory" placeholder="機械加工（普通旋盤作業）" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="contractStartDate">雇用契約開始日</label>
+              <input type="date" id="contractStartDate" />
+            </div>
+            <div class="form-group">
+              <label for="contractEndDate">雇用契約終了日</label>
+              <input type="date" id="contractEndDate" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">電話番号</label>
+            <input type="text" id="phone" placeholder="090-1234-5678" />
+          </div>
+
+          <div class="form-group">
+            <label for="notes">備考</label>
+            <input type="text" id="notes" placeholder="特記事項" />
+          </div>
+
+          <div id="formErrors" class="alert-error" hidden></div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submitBtn">登録する</button>
+            <button type="button" class="btn btn-secondary" id="cancelEditBtn" hidden>キャンセル</button>
+          </div>
         </form>
-
-        <div id="previewResult" class="preview"></div>
       </section>
 
       <section class="card">
         <div class="card-title-row">
-          <h2 class="card-title">Bảng lương</h2>
-          <button id="exportBtn" class="btn btn-success btn-small">📥 Xuất Excel</button>
+          <h2 class="card-title">対象者一覧（在留期限順）</h2>
+          <button id="exportBtn" class="btn btn-success btn-small">📥 名簿をExcel出力</button>
         </div>
+
+        <div class="filter-bar">
+          <input type="text" id="searchInput" placeholder="氏名・受入企業・国籍で検索" />
+          <select id="filterVisaType">
+            <option value="">すべての在留資格</option>
+            <option value="技能実習1号">技能実習1号</option>
+            <option value="技能実習2号">技能実習2号</option>
+            <option value="技能実習3号">技能実習3号</option>
+            <option value="特定技能1号">特定技能1号</option>
+            <option value="特定技能2号">特定技能2号</option>
+          </select>
+        </div>
+
         <div class="table-wrap">
-          <table id="salaryTable">
+          <table id="workerTable">
             <thead>
               <tr>
-                <th>Họ tên</th>
-                <th>Thu nhập</th>
-                <th>Bảo hiểm</th>
-                <th>Thuế TNCN</th>
-                <th>Thực nhận</th>
+                <th>氏名</th>
+                <th>在留資格</th>
+                <th>受入企業</th>
+                <th>在留期限</th>
+                <th>状態</th>
                 <th></th>
               </tr>
             </thead>
-            <tbody id="salaryTableBody">
+            <tbody id="workerTableBody">
               <tr class="empty-row">
-                <td colspan="6">Chưa có nhân viên nào. Nhập thông tin bên trái để bắt đầu.</td>
+                <td colspan="6">対象者が登録されていません。左のフォームから登録してください。</td>
               </tr>
             </tbody>
           </table>
