@@ -9,11 +9,6 @@ services:
         value: コネクト協同組合
       - key: PERMIT_NO
         value: 許1808000401
-      - key: DB_PATH
-        value: /data/data.sqlite3
-    # 永続ディスク（有料プランが必要）。無ければ DB_PATH を削除し、
-    # データはデプロイのたびにリセットされる想定で運用してください。
-    disk:
-      name: connect-app-data
-      mountPath: /data
-      sizeGB: 1
+    # 無料プランは永続ディスクに対応していないため、DB (data.sqlite3) は
+    # サービスの再起動では保持されますが、再デプロイのたびにリセットされます。
+    # 有料プランに切り替える場合は DB_PATH と disk 設定を追加してください。
