@@ -62,19 +62,17 @@
             <div class="org-license"><span class="org-license-label">登録支援機関登録番号</span>19登-003232</div>
           </div>
         </div>
-        <div class="user-chip">
-          <span id="currentUserName" class="user-name"></span>
-          <div class="user-actions">
-            <button id="addAccountBtn" class="link-btn user-action">アカウント追加</button>
-            <button id="logoutBtn" class="link-btn user-action">ログアウト</button>
-          </div>
-        </div>
       </div>
     </aside>
 
     <div class="main-area">
       <header class="topbar">
         <h1 id="pageTitle">ダッシュボード</h1>
+        <div class="topbar-user">
+          <span id="currentUserName" class="topbar-user-name"></span>
+          <button id="addAccountBtn" class="link-btn topbar-user-action">アカウント追加</button>
+          <button id="logoutBtn" class="link-btn topbar-user-action">ログアウト</button>
+        </div>
       </header>
       <main id="tabContent"></main>
     </div>
