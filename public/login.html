@@ -80,7 +80,7 @@
       </form>
     </div>
 
-    <div id="loginView" hidden>
+    <div id="loginView">
       <div class="login-title">ログイン</div>
       <div class="login-sub">アカウント情報を入力してください。</div>
       <form id="loginForm">
@@ -103,12 +103,12 @@
     const loginView = document.getElementById('loginView');
 
     async function init() {
+      // デフォルトはログイン画面。初回セットアップ（管理者アカウントが1件も無い場合のみ）に該当する時だけ切り替える。
       const res = await fetch('/api/auth/setup-needed');
       const { needed } = await res.json();
       if (needed) {
+        loginView.hidden = true;
         setupView.hidden = false;
-      } else {
-        loginView.hidden = false;
       }
     }
 
