@@ -1,2 +1,4 @@
 node_modules/
 .env
+data.sqlite3
+data.sqlite3-*

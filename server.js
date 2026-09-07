@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const ExcelJS = require('exceljs');
+const store = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,9 +36,6 @@ function withStatus(worker) {
   return { ...worker, visaStatus: getVisaStatus(worker.visaExpiryDate) };
 }
 
-let workers = [];
-let nextId = 1;
-
 function validateWorker(body) {
   const errors = [];
   if (!body.name || !body.name.trim()) errors.push('氏名は必須です。');
@@ -47,9 +45,8 @@ function validateWorker(body) {
   return errors;
 }
 
-function buildWorkerRecord(body, existing = {}) {
+function buildWorkerRecord(body) {
   return {
-    id: existing.id,
     name: (body.name || '').trim(),
     nameKana: (body.nameKana || '').trim(),
     nationality: (body.nationality || '').trim(),
@@ -75,7 +72,7 @@ app.get('/api/visa-types', (req, res) => res.json(VISA_TYPES));
 
 app.get('/api/workers', (req, res) => {
   const { visaType, search } = req.query;
-  let result = workers.map(withStatus);
+  let result = store.listWorkers().map(withStatus);
 
   if (visaType) {
     result = result.filter((w) => w.visaType === visaType);
@@ -102,7 +99,7 @@ app.get('/api/workers', (req, res) => {
 });
 
 app.get('/api/workers/:id', (req, res) => {
-  const worker = workers.find((w) => w.id === Number(req.params.id));
+  const worker = store.getWorker(Number(req.params.id));
   if (!worker) return res.status(404).json({ error: '対象者が見つかりません。' });
   res.json(withStatus(worker));
 });
@@ -111,31 +108,31 @@ app.post('/api/workers', (req, res) => {
   const errors = validateWorker(req.body);
   if (errors.length) return res.status(400).json({ errors });
 
-  const record = buildWorkerRecord(req.body, { id: nextId++ });
-  workers.push(record);
-  res.status(201).json(withStatus(record));
+  const record = buildWorkerRecord(req.body);
+  const saved = store.insertWorker(record);
+  res.status(201).json(withStatus(saved));
 });
 
 app.put('/api/workers/:id', (req, res) => {
-  const idx = workers.findIndex((w) => w.id === Number(req.params.id));
-  if (idx === -1) return res.status(404).json({ error: '対象者が見つかりません。' });
+  const id = Number(req.params.id);
+  if (!store.getWorker(id)) return res.status(404).json({ error: '対象者が見つかりません。' });
 
   const errors = validateWorker(req.body);
   if (errors.length) return res.status(400).json({ errors });
 
-  const record = buildWorkerRecord(req.body, { id: workers[idx].id });
-  workers[idx] = record;
-  res.json(withStatus(record));
+  const record = buildWorkerRecord(req.body);
+  const saved = store.updateWorker(id, record);
+  res.json(withStatus(saved));
 });
 
 app.delete('/api/workers/:id', (req, res) => {
-  const before = workers.length;
-  workers = workers.filter((w) => w.id !== Number(req.params.id));
-  if (workers.length === before) return res.status(404).json({ error: '対象者が見つかりません。' });
+  const deleted = store.deleteWorker(Number(req.params.id));
+  if (!deleted) return res.status(404).json({ error: '対象者が見つかりません。' });
   res.json({ ok: true });
 });
 
 app.get('/api/stats', (req, res) => {
+  const workers = store.listWorkers();
   const withStatuses = workers.map(withStatus);
   res.json({
     total: workers.length,
@@ -169,7 +166,7 @@ app.get('/api/export', async (req, res) => {
     { header: '備考', key: 'notes', width: 24 },
   ];
   sheet.getRow(1).font = { bold: true };
-  workers.forEach((w) => sheet.addRow(w));
+  store.listWorkers().forEach((w) => sheet.addRow(w));
 
   res.setHeader(
     'Content-Type',
@@ -182,7 +179,7 @@ app.get('/api/export', async (req, res) => {
 
 // 個人別の書類（技能実習生・特定技能外国人 個人票）を Excel で出力
 app.get('/api/workers/:id/document', async (req, res) => {
-  const worker = workers.find((w) => w.id === Number(req.params.id));
+  const worker = store.getWorker(Number(req.params.id));
   if (!worker) return res.status(404).json({ error: '対象者が見つかりません。' });
 
   const workbook = new ExcelJS.Workbook();
