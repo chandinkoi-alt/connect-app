@@ -31,9 +31,39 @@ header {
   color: #64748b;
 }
 
+.tabs-nav {
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 20px;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  border: none;
+  background: none;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: #0284c7;
+}
+
+.tab-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+}
+
 main {
   padding: 25px 30px;
-  max-width: 1300px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -58,6 +88,15 @@ main {
   text-align: center;
 }
 
+.stat-card.clickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.stat-card.clickable:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 .stat-value {
   font-size: 24px;
   font-weight: bold;
@@ -78,18 +117,6 @@ main {
   color: #dc2626;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 25px;
-}
-
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .card {
   background: #fff;
   padding: 20px;
@@ -100,7 +127,6 @@ main {
 .card-title {
   font-size: 16px;
   font-weight: bold;
-  margin-bottom: 15px;
 }
 
 .card-title-row {
@@ -110,6 +136,15 @@ main {
   margin-bottom: 15px;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #334155;
+  margin: 18px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .form-group {
@@ -155,9 +190,9 @@ select {
 }
 
 .btn-primary {
-  flex: 1;
   background-color: #0284c7;
   color: #fff;
+  width: 100%;
 }
 
 .btn-secondary {
@@ -173,6 +208,7 @@ select {
 .btn-small {
   font-size: 12px;
   padding: 8px 12px;
+  width: auto;
 }
 
 .btn:hover {
@@ -234,12 +270,19 @@ th {
   white-space: normal;
 }
 
+.empty-hint {
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 10px 0;
+}
+
 .badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 11px;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .badge-ok {
@@ -265,6 +308,7 @@ th {
 .row-actions {
   display: flex;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .link-btn {
@@ -274,6 +318,12 @@ th {
   font-size: 12px;
   font-weight: bold;
   padding: 2px 4px;
+}
+
+.link-view {
+  color: #0284c7;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .link-edit {
@@ -286,4 +336,209 @@ th {
 
 .link-delete {
   color: #dc2626;
+}
+
+/* Kanban */
+.kanban-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.kanban-column {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 220px;
+}
+
+.kanban-column-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kanban-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.kanban-card-title {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.kanban-card-sub {
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.kanban-select {
+  margin-top: 8px;
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+.kanban-card .btn-small {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.kanban-empty {
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
+  padding: 10px 0;
+}
+
+/* Task list (Dashboard) */
+.task-list {
+  list-style: none;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+.task-link {
+  color: #0f172a;
+  font-weight: 600;
+  text-decoration: none;
+  flex: 1;
+}
+
+.task-link:hover {
+  text-decoration: underline;
+}
+
+.task-due {
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* Profile 360 */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  margin-bottom: 10px;
+}
+
+.profile-grid .span-2 {
+  grid-column: span 2;
+}
+
+.profile-grid label {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.profile-grid > div > div {
+  font-size: 13px;
+}
+
+.mini-list {
+  list-style: none;
+  font-size: 13px;
+}
+
+.mini-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.checklist {
+  list-style: none;
+  font-size: 13px;
+}
+
+.checklist li {
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.checklist input {
+  width: auto;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 600px;
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  font-size: 16px;
+}
+
+.modal-close {
+  border: none;
+  background: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
 }
