@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: connect-app
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: UNION_NAME
+        value: コネクト協同組合
+      - key: PERMIT_NO
+        value: 許1808000401
