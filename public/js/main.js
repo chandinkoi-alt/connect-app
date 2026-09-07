@@ -91,3 +91,11 @@ function openAddAccountModal() {
 }
 
 window.addEventListener('DOMContentLoaded', checkAuthAndBoot);
+
+// ブラウザの戻る/進むでbfcacheから復元された場合、ログアウト後の古い画面が
+// 一瞬表示されるのを防ぐため強制的に再読み込みする
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
