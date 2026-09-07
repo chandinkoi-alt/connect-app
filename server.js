@@ -1,199 +1,278 @@
-const express = require('express');
-const cors = require('cors');
+import React, { useState } from 'react';
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+export default function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-app.use(cors());
-app.use(express.json());
+  // Master Data: 実習実施者（受入企業）リスト
+  const [companies, setCompanies] = useState([
+    { id: 1, code: 'JSS-10023', nameKanji: '株式会社 田中鉄工', employeeCount: 28, currentTts: 2, prefecture: '東京都' },
+    { id: 2, code: 'JSS-10024', nameKanji: 'ヤマト食品 株式会社', employeeCount: 45, currentTts: 4, prefecture: '埼玉県' },
+    { id: 3, code: 'JSS-10025', nameKanji: '鈴木建設 株式会社', employeeCount: 15, currentTts: 3, prefecture: '神奈川県' }
+  ]);
 
-app.get('/health', (req, res) => res.send('OK'));
+  // Form State: 技能実習計画認定申請
+  const [selectedCompanyId, setSelectedCompanyId] = useState('1');
+  const [workerName, setWorkerName] = useState('NGUYEN VAN A');
+  const [passport, setPassport] = useState('C12345678');
+  const [instructorExp, setInstructorExp] = useState(8);
+  const [hourlyWage, setHourlyWage] = useState(1120);
+  const [validationResult, setValidationResult] = useState(null);
 
-app.get('/', (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>コネクト協同組合 - 統合管理システム</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    body { display: flex; height: 100vh; background-color: #f4f6f9; color: #333; }
-    .sidebar { width: 260px; background-color: #1a252f; color: #fff; display: flex; flex-direction: column; }
-    .brand { padding: 20px; font-size: 16px; font-weight: bold; background-color: #0f171e; border-bottom: 1px solid #2c3e50; }
-    .brand-sub { font-size: 11px; color: #bdc3c7; font-weight: normal; display: block; margin-top: 4px; }
-    .nav-menu { list-style: none; margin-top: 15px; flex: 1; }
-    .nav-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; border-left: 4px solid transparent; }
-    .nav-item:hover, .nav-item.active { background-color: #2c3e50; border-left-color: #3498db; color: #fff; }
-    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-    .topbar { background-color: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .content-area { padding: 25px; }
-    .page-section { display: none; }
-    .page-section.active { display: block; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
-    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-top: 4px solid #3498db; }
-    .card-title { font-size: 12px; color: #7f8c8d; font-weight: bold; text-transform: uppercase; }
-    .card-value { font-size: 26px; font-weight: bold; color: #2c3e50; margin-top: 8px; }
-    .data-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
-    .data-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-    .data-card-title { font-size: 16px; color: #2c3e50; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-    th, td { padding: 12px; border-bottom: 1px solid #eef2f5; }
-    th { background-color: #f8f9fa; color: #7f8c8d; }
-    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
-    .btn-primary { background-color: #3498db; color: #fff; }
-    .btn-success { background-color: #2ecc71; color: #fff; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-group label { font-size: 13px; font-weight: bold; color: #555; }
-    .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-  </style>
-</head>
-<body>
+  // OTIT 法令チェック＆書類自動生成ロジック
+  const handleValidateAndGenerate = (e) => {
+    e.preventDefault();
+    setValidationResult(null);
 
-  <div class="sidebar">
-    <div class="brand">
-      コネクト協同組合
-      <span class="brand-sub">統合管理システム (許1808000401)</span>
-    </div>
-    <ul class="nav-menu">
-      <li class="nav-item active" onclick="switchPage('dashboard', this)">📊 ダッシュボード (Tổng quan)</li>
-      <li class="nav-item" onclick="switchPage('trainees', this)">👥 実習生・特定技能 (Thực tập sinh)</li>
-      <li class="nav-item" onclick="switchPage('companies', this)">🏢 受入企業管理 (Xí nghiệp)</li>
-      <li class="nav-item" onclick="switchPage('documents', this)">📄 書類作成 (Giấy tờ OTIT)</li>
-    </ul>
-  </div>
+    const company = companies.find(c => c.id === Number(selectedCompanyId));
+    let errors = [];
 
-  <div class="main-content">
-    <div class="topbar">
-      <h2 id="pageTitle" style="font-size: 18px;">ダッシュボード (Tổng quan)</h2>
-      <div style="font-size: 14px;">👤 監理責任者: 管理員アカウント</div>
-    </div>
+    // Rule 1: 受入人数枠チェック（常勤職員数に基づく）
+    let maxQuota = 3;
+    if (company.employeeCount > 50) maxQuota = 6;
+    else if (company.employeeCount > 40) maxQuota = 5;
+    else if (company.employeeCount > 30) maxQuota = 4;
 
-    <div class="content-area">
-      <div id="dashboard" class="page-section active">
-        <div class="stats-grid">
-          <div class="card" style="border-top-color: #2ecc71;">
-            <div class="card-title">総実習生・特定技能数</div>
-            <div class="card-value">128 名</div>
-          </div>
-          <div class="card" style="border-top-color: #e74c3c;">
-            <div class="card-title">ビザ更新期限間近</div>
-            <div class="card-value">5 名</div>
-          </div>
-          <div class="card" style="border-top-color: #9b59b6;">
-            <div class="card-title">受入企業数</div>
-            <div class="card-value">18 社</div>
-          </div>
-        </div>
-
-        <div class="data-card">
-          <div class="data-card-header">
-            <div class="data-card-title">⚠️ ビザ・在留期限 アラート (Cảnh báo Visa)</div>
-          </div>
-          <table>
-            <thead>
-              <tr><th>氏名</th><th>受入企業</th><th>在留資格</th><th>期限日</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>NGUYEN VAN A</td><td>株式会社大阪工業</td><td>技能実習1号</td><td>2026/10/15</td></tr>
-              <tr><td>TRAN THI B</td><td>トヨタ金属株式会社</td><td>特定技能1号</td><td>2026/11/01</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="trainees" class="page-section">
-        <div class="data-card">
-          <div class="data-card-header"><div class="data-card-title">新規実習生登録 (Thêm TTS mới)</div></div>
-          <div class="form-grid">
-            <div class="form-group"><label>氏名:</label><input type="text" id="tName" placeholder="LE VAN C"></div>
-            <div class="form-group"><label>受入企業:</label><input type="text" id="tCompany" placeholder="株式会社関西建設"></div>
-            <div class="form-group">
-              <label>在留資格:</label>
-              <select id="tVisa"><option>技能実習1号</option><option>特定技能1号</option></select>
-            </div>
-            <div class="form-group"><label>入国日:</label><input type="date" id="tDate"></div>
-          </div>
-          <button class="btn btn-success" onclick="addTrainee()">+ 登録 (Thêm vào hệ thống)</button>
-        </div>
-
-        <div class="data-card">
-          <div class="data-card-header"><div class="data-card-title">実習生一覧 (Danh sách TTS)</div></div>
-          <table id="traineeTable">
-            <thead>
-              <tr><th>ID</th><th>氏名</th><th>受入企業</th><th>在留資格</th><th>入国日</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>TTS001</td><td>NGUYEN VAN A</td><td>株式会社大阪工業</td><td>技能実習1号</td><td>2024/05/10</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="companies" class="page-section">
-        <div class="data-card">
-          <div class="data-card-header"><div class="data-card-title">受入企業一覧 (Danh sách Xí nghiệp)</div></div>
-          <table>
-            <thead><tr><th>企業名</th><th>代表者</th><th>住所</th><th>人数</th></tr></thead>
-            <tbody>
-              <tr><td>株式会社大阪工業</td><td>山田 太郎</td><td>大阪府豊中市...</td><td>12名</td></tr>
-              <tr><td>トヨタ金属株式会社</td><td>佐藤 健</td><td>愛知県名古屋市...</td><td>25名</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="documents" class="page-section">
-        <div class="data-card">
-          <div class="data-card-header"><div class="data-card-title">書類作成 (Tạo Giấy tờ OTIT)</div></div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>対象企業:</label>
-              <select><option>株式会社大阪工業</option><option>トヨタ金属株式会社</option></select>
-            </div>
-            <div class="form-group">
-              <label>書類種別:</label>
-              <select>
-                <option>実習実施者 監査報告書</option>
-                <option>訪問指導記録書</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="alert('Đang tạo báo cáo...')">📄 書類を作成・印刷</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function switchPage(pageId, element) {
-      document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-menu li').forEach(n => n.classList.remove('active'));
-      document.getElementById(pageId).classList.add('active');
-      element.classList.add('active');
-      document.getElementById('pageTitle').innerText = element.innerText;
+    if (company.currentTts >= maxQuota) {
+      errors.push(`【受入枠超過】${company.nameKanji} は現在の受入上限（${maxQuota}名/年）に達しています。`);
     }
 
-    function addTrainee() {
-      const name = document.getElementById('tName').value;
-      const comp = document.getElementById('tCompany').value;
-      const visa = document.getElementById('tVisa').value;
-      const date = document.getElementById('tDate').value;
-      if(!name || !comp) { alert('Vui lòng nhập Họ tên và Xí nghiệp!'); return; }
+    // Rule 2: 技能実習指導員の要件チェック（実務経験5年以上）
+    if (Number(instructorExp) < 5) {
+      errors.push(`【指導員要件不備】技能実習指導員の経験年数が不足しています（現在: ${instructorExp}年 / 必要: 5年以上）。`);
+    }
+
+    // Rule 3: 地域別最低賃金チェック（例: 東京都 1,113円）
+    if (Number(hourlyWage) < 1113) {
+      errors.push(`【賃金不備】基本賃金（${hourlyWage}円）が地域別最低賃金（1,113円）を下回っています。`);
+    }
+
+    if (errors.length > 0) {
+      setValidationResult({ status: 'ERROR', errors });
+    } else {
+      setValidationResult({
+        status: 'SUCCESS',
+        message: '法令チェック完了：申請書類の自動生成が可能です。',
+        details: {
+          company: company.nameKanji,
+          worker: workerName,
+          passport: passport,
+          wage: `${hourlyWage} 円/時間`,
+          files: ['技能実習計画認定申請書 (様式第1-1号).xlsx', '技能実習生の名簿.xlsx', '雇用条件書.docx']
+        }
+      });
+    }
+  };
+
+  // CSV/Excel ファイル出力機能（実機能）
+  const downloadDocument = () => {
+    const company = companies.find(c => c.id === Number(selectedCompanyId));
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + "項目,申請内容\n"
+      + `実習実施者名,${company.nameKanji}\n`
+      + `技能実習生氏名,${workerName}\n`
+      + `旅券番号,${passport}\n`
+      + `基本賃金,${hourlyWage}円\n`
+      + `指導員経験年数,${instructorExp}年\n`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `OTIT_申請データ_${workerName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div style={{ fontFamily: '"Hiragino Sans", "Meiryo", sans-serif', backgroundColor: '#f1f5f9', minHeight: '100vh', margin: 0 }}>
       
-      const table = document.getElementById('traineeTable').getElementsByTagName('tbody')[0];
-      const newRow = table.insertRow();
-      newRow.innerHTML = '<td>TTS002</td><td>' + name + '</td><td>' + comp + '</td><td>' + visa + '</td><td>' + (date || '未設定') + '</td>';
-      alert('Đã thêm thành công!');
-      document.getElementById('tName').value = '';
-      document.getElementById('tCompany').value = '';
-    }
-  </script>
-</body>
-</html>
-  `);
-});
+      {/* ナビゲーションバー */}
+      <header style={{ backgroundColor: '#0f172a', color: '#fff', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '24px' }}>🏛️</span>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>監理団体業務管理システム</h2>
+            <small style={{ color: '#94a3b8' }}>OTIT認定申請・特定技能支援自動化プラットフォーム</small>
+          </div>
+        </div>
+        <nav>
+          <button onClick={() => setActiveTab('dashboard')} style={navStyle(activeTab === 'dashboard')}>ダッシュボード</button>
+          <button onClick={() => setActiveTab('companies')} style={navStyle(activeTab === 'companies')}>実習実施者管理</button>
+          <button onClick={() => setActiveTab('generate')} style={navStyle(activeTab === 'generate')}>認定申請書作成</button>
+        </nav>
+      </header>
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+      {/* メインコンテンツ */}
+      <main style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
+
+        {/* TAB 1: DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '25px' }}>
+              <div style={cardStyle}>
+                <small style={{ color: '#64748b', fontWeight: 'bold' }}>受入企業数</small>
+                <h2 style={{ margin: '10px 0 0 0', color: '#0f172a' }}>65 社</h2>
+              </div>
+              <div style={{ ...cardStyle, borderTop: '4px solid #2563eb' }}>
+                <small style={{ color: '#64748b', fontWeight: 'bold' }}>技能実習生数 (1~3号)</small>
+                <h2 style={{ margin: '10px 0 0 0', color: '#2563eb' }}>142 名</h2>
+              </div>
+              <div style={{ ...cardStyle, borderTop: '4px solid #059669' }}>
+                <small style={{ color: '#64748b', fontWeight: 'bold' }}>特定技能外国人</small>
+                <h2 style={{ margin: '10px 0 0 0', color: '#059669' }}>38 名</h2>
+              </div>
+              <div style={{ ...cardStyle, borderTop: '4px solid #d97706' }}>
+                <small style={{ color: '#64748b', fontWeight: 'bold' }}>申請中案件 (OTIT)</small>
+                <h2 style={{ margin: '10px 0 0 0', color: '#d97706' }}>5 件</h2>
+              </div>
+            </div>
+
+            {/* アラート通知 */}
+            <div style={{ ...cardStyle, borderLeft: '6px solid #ef4444' }}>
+              <h3 style={{ marginTop: 0, color: '#dc2626' }}>⚠️ 業務アラート・期限通知</h3>
+              <ul style={{ paddingLeft: '20px', lineHeight: '1.8', margin: 0 }}>
+                <li><strong style={{ color: '#dc2626' }}>[在留資格更新]:</strong> 技能実習生 NGUYEN VAN A (田中鉄工) の在留期限まで残り60日です。</li>
+                <li><strong style={{ color: '#d97706' }}>[定期監査]:</strong> ヤマト食品株式会社の3ヶ月定期監査の期日が接近しています。</li>
+                <li><strong style={{ color: '#2563eb' }}>[四半期報告]:</strong> 特定技能支援に関する四半期報告書（出入国在留管理局）の提出準備を行ってください。</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: 受入企業管理 */}
+        {activeTab === 'companies' && (
+          <div style={cardStyle}>
+            <h3 style={{ marginTop: 0 }}>実習実施者（受入企業）一覧</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', marginTop: '15px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={tableTdStyle}>企業コード</th>
+                  <th style={tableTdStyle}>実習実施者名</th>
+                  <th style={tableTdStyle}>所在地</th>
+                  <th style={tableTdStyle}>常勤職員数</th>
+                  <th style={tableTdStyle}>年間受入可能枠</th>
+                </tr>
+              </thead>
+              <tbody>
+                {companies.map(c => (
+                  <tr key={c.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={tableTdStyle}><code>{c.code}</code></td>
+                    <td style={{ ...tableTdStyle, fontWeight: 'bold' }}>{c.nameKanji}</td>
+                    <td style={tableTdStyle}>{c.prefecture}</td>
+                    <td style={tableTdStyle}>{c.employeeCount} 名</td>
+                    <td style={tableTdStyle}>
+                      <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                        最大 {c.employeeCount <= 30 ? 3 : c.employeeCount <= 40 ? 4 : 5} 名/年
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* TAB 3: 認定申請書自動生成 */}
+        {activeTab === 'generate' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+            
+            {/* 入力フォーム */}
+            <div style={cardStyle}>
+              <h3 style={{ marginTop: 0 }}>⚙️ 技能実習計画認定申請 - 情報入力</h3>
+              
+              <form onSubmit={handleValidateAndGenerate}>
+                <div style={formGroupStyle}>
+                  <label style={labelStyle}>1. 実習実施者の選択:</label>
+                  <select value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)} style={inputStyle}>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.nameKanji} (常勤: {c.employeeCount}名)</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={formGroupStyle}>
+                  <label style={labelStyle}>2. 技能実習生氏名 (アルファベット):</label>
+                  <input type="text" value={workerName} onChange={e => setWorkerName(e.target.value)} style={inputStyle} />
+                </div>
+
+                <div style={formGroupStyle}>
+                  <label style={labelStyle}>3. 旅券番号 (Passport No.):</label>
+                  <input type="text" value={passport} onChange={e => setPassport(e.target.value)} style={inputStyle} />
+                </div>
+
+                <div style={formGroupStyle}>
+                  <label style={labelStyle}>4. 技能実習指導員の実務経験年数:</label>
+                  <input type="number" value={instructorExp} onChange={e => setInstructorExp(e.target.value)} style={inputStyle} />
+                  <small style={{ color: '#dc2626' }}>※5未満を入力するとエラー検証テストが可能です。</small>
+                </div>
+
+                <div style={formGroupStyle}>
+                  <label style={labelStyle}>5. 基本賃金 (時給換算・円):</label>
+                  <input type="number" value={hourlyWage} onChange={e => setHourlyWage(e.target.value)} style={inputStyle} />
+                  <small style={{ color: '#dc2626' }}>※1113未満を入力すると最低賃金割れエラーになります。</small>
+                </div>
+
+                <button type="submit" style={submitBtnStyle}>
+                  🔍 法令チェック＆書類生成実行
+                </button>
+              </form>
+            </div>
+
+            {/* 結果表示・ダウンロード */}
+            <div style={cardStyle}>
+              <h3 style={{ marginTop: 0 }}>📋 審査結果・申請書類出力</h3>
+              
+              {!validationResult && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', border: '2px dashed #cbd5e1', borderRadius: '8px' }}>
+                  <p>左側のフォームに必要な情報を入力し、<strong>「法令チェック＆書類生成実行」</strong>を押してください。</p>
+                </div>
+              )}
+
+              {validationResult && validationResult.status === 'ERROR' && (
+                <div style={{ padding: '20px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                  <h4 style={{ color: '#dc2626', margin: '0 0 10px 0' }}>✕ 法令要件不備が検出されました:</h4>
+                  <ul style={{ margin: 0, paddingLeft: '20px', color: '#991b1b', lineHeight: '1.6' }}>
+                    {validationResult.errors.map((err, idx) => (
+                      <li key={idx} style={{ marginBottom: '8px' }}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {validationResult && validationResult.status === 'SUCCESS' && (
+                <div style={{ padding: '20px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
+                  <h4 style={{ color: '#166534', margin: '0 0 10px 0' }}>✓ {validationResult.message}</h4>
+                  
+                  <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#14532d', marginBottom: '15px' }}>
+                    <p><strong>実習実施者:</strong> {validationResult.details.company}</p>
+                    <p><strong>実習生:</strong> {validationResult.details.worker} ({validationResult.details.passport})</p>
+                    <p><strong>基本賃金:</strong> {validationResult.details.wage}</p>
+                  </div>
+
+                  <button onClick={downloadDocument} style={downloadBtnStyle}>
+                    📥 申請データをダウンロード (.CSV / Excel)
+                  </button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
+
+// Inline Style Helper
+const navStyle = (active) => ({
+  backgroundColor: active ? '#2563eb' : 'transparent',
+  color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', marginLeft: '8px', fontWeight: active ? 'bold' : 'normal'
+});
+const cardStyle = { backgroundColor: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' };
+const tableTdStyle = { padding: '12px', fontSize: '14px' };
+const formGroupStyle = { marginBottom: '15px' };
+const labelStyle = { display: 'block', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px', color: '#334155' };
+const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontSize: '14px' };
+const submitBtnStyle = { width: '100%', padding: '12px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' };
+const downloadBtnStyle = { marginTop: '15px', width: '100%', padding: '12px', backgroundColor: '#166534', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' };
