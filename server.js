@@ -48,11 +48,24 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/billing', require('./routes/billing'));
 
-app.use(express.static(path.join(__dirname, 'public')));
+// index.html / login.html はブラウザやbfcacheにキャッシュさせない
+// （ログアウト後に戻るボタンで古い認証済み画面が一瞬表示される問題を防ぐ）
+// express.static は "/" を index.html として自動配信してしまうため、
+// 先にこのルートで明示的に処理する（static はそれ以外の静的ファイル用）
+function noStore(req, res, next) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  next();
+}
 
-app.get('/', (req, res) => {
+app.get('/', noStore, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+app.get('/login.html', noStore, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 ready
   .then(() => {
