@@ -26,9 +26,14 @@
     }
     .login-brand {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       margin-bottom: 24px;
+    }
+    .login-logo {
+      height: 48px;
+      width: auto;
     }
     .login-title {
       font-size: 15px;
@@ -50,11 +55,8 @@
 <body>
   <div class="login-box">
     <div class="login-brand">
-      <div class="brand-mark">C</div>
-      <div>
-        <div style="font-weight:700; font-size:15px;">Connect</div>
-        <div style="font-size:11px; color:var(--color-text-subtle);">業務管理システム</div>
-      </div>
+      <img src="assets/logo.png" alt="CONNECT" class="login-logo" />
+      <div style="font-size:11px; color:var(--color-text-subtle);">業務管理システム</div>
     </div>
 
     <div id="setupView" hidden>
