@@ -256,7 +256,7 @@ const TabRecruitment = {
         await api.post(`/api/candidates/${candidate.id}/hire`, body);
         Modal.close();
         await this.loadCandidates();
-        alert('登録が完了しました。「人材360」「認定申請」タブに反映されています。');
+        alert('登録が完了しました。「人材一覧」「認定申請」タブに反映されています。');
       } catch (err) {
         const el = document.getElementById('formErrors');
         el.textContent = formatErrors(err);

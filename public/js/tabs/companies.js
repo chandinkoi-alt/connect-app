@@ -3,7 +3,7 @@ const TabCompanies = {
     container.innerHTML = `
       <section class="card">
         <div class="card-title-row">
-          <h2 class="card-title">受入企業360</h2>
+          <h2 class="card-title">受入企業一覧</h2>
           <button class="btn btn-primary btn-small" id="addCompanyBtn">＋ 新規登録</button>
         </div>
         <div class="table-wrap">
@@ -62,7 +62,7 @@ const TabCompanies = {
 
   openProfile(company) {
     Modal.open(
-      `${company.name}（受入企業360）`,
+      `${company.name}（受入企業一覧）`,
       `
       <div class="profile-grid">
         <div><label>所在地</label><div>${escapeHtml(company.address) || '－'}</div></div>
