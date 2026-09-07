@@ -17,3 +17,10 @@ services:
         sync: false
       - key: TURSO_AUTH_TOKEN
         sync: false
+      - key: NODE_ENV
+        value: production
+      # ログインセッションの署名に使う秘密鍵。未設定でも動作するが、
+      # その場合は再デプロイのたびに全員ログアウトされる。
+      # ランダムな長い文字列を手動で設定すると、再デプロイ後もログイン状態が保持される。
+      - key: SESSION_SECRET
+        sync: false
