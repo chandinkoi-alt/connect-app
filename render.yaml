@@ -9,3 +9,11 @@ services:
         value: コネクト協同組合
       - key: PERMIT_NO
         value: 許1808000401
+      - key: DB_PATH
+        value: /data/data.sqlite3
+    # 永続ディスク（有料プランが必要）。無ければ DB_PATH を削除し、
+    # データはデプロイのたびにリセットされる想定で運用してください。
+    disk:
+      name: connect-app-data
+      mountPath: /data
+      sizeGB: 1
