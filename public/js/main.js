@@ -5,6 +5,7 @@ const TABS = {
   workers: TabWorkers,
   applications: TabApplications,
   companies: TabCompanies,
+  invoices: TabInvoices,
   visits: TabVisits,
 };
 

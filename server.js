@@ -45,6 +45,8 @@ app.use('/api/workers', require('./routes/workers'));
 app.use('/api/application-cases', require('./routes/applicationCases'));
 app.use('/api/visits', require('./routes/visits'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/billing', require('./routes/billing'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 

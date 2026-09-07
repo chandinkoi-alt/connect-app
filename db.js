@@ -106,6 +106,32 @@ const SCHEMA = `
     name TEXT,
     createdAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS billing_rates (
+    visaType TEXT PRIMARY KEY,
+    monthlyFee INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS invoices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hostCompanyId INTEGER NOT NULL REFERENCES host_companies(id) ON DELETE CASCADE,
+    billingMonth TEXT NOT NULL,
+    issueDate TEXT,
+    dueDate TEXT,
+    status TEXT NOT NULL DEFAULT '下書き',
+    notes TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS invoice_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoiceId INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    workerId INTEGER REFERENCES workers(id) ON DELETE SET NULL,
+    itemType TEXT NOT NULL DEFAULT 'additional',
+    description TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unitPrice INTEGER NOT NULL DEFAULT 0,
+    amount INTEGER NOT NULL DEFAULT 0
+  );
 `;
 
 const ready = client.executeMultiple(SCHEMA);
@@ -190,6 +216,38 @@ users.count = async () => {
   return Number(rs.rows[0].c);
 };
 
+const invoices = makeRepo('invoices', [
+  'hostCompanyId', 'billingMonth', 'issueDate', 'dueDate', 'status', 'notes',
+]);
+
+const invoiceItems = makeRepo('invoice_items', [
+  'invoiceId', 'workerId', 'itemType', 'description', 'quantity', 'unitPrice', 'amount',
+]);
+
+invoiceItems.listByInvoice = async (invoiceId) => {
+  const rs = await client.execute({
+    sql: 'SELECT * FROM invoice_items WHERE invoiceId = ? ORDER BY id',
+    args: [invoiceId],
+  });
+  return rs.rows.map((row) => ({ ...row }));
+};
+
+const billingRates = {
+  async list() {
+    const rs = await client.execute('SELECT * FROM billing_rates');
+    return rs.rows.map((row) => ({ ...row }));
+  },
+  async upsert(visaType, monthlyFee) {
+    await client.execute({
+      sql: `INSERT INTO billing_rates (visaType, monthlyFee) VALUES (?, ?)
+            ON CONFLICT(visaType) DO UPDATE SET monthlyFee = excluded.monthlyFee`,
+      args: [visaType, monthlyFee],
+    });
+    const rs = await client.execute({ sql: 'SELECT * FROM billing_rates WHERE visaType = ?', args: [visaType] });
+    return { ...rs.rows[0] };
+  },
+};
+
 module.exports = {
   client,
   ready,
@@ -200,4 +258,7 @@ module.exports = {
   applicationCases,
   visitsAudits,
   users,
+  invoices,
+  invoiceItems,
+  billingRates,
 };
