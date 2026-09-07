@@ -98,6 +98,14 @@ const SCHEMA = `
     result TEXT,
     notes TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    passwordHash TEXT NOT NULL,
+    name TEXT,
+    createdAt TEXT NOT NULL
+  );
 `;
 
 const ready = client.executeMultiple(SCHEMA);
@@ -170,6 +178,18 @@ const visitsAudits = makeRepo('visits_audits', [
   'workerId', 'hostCompanyId', 'type', 'scheduledDate', 'completedDate', 'result', 'notes',
 ]);
 
+const users = makeRepo('users', ['username', 'passwordHash', 'name', 'createdAt']);
+
+users.findByUsername = async (username) => {
+  const rs = await client.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
+  return rs.rows.length ? { ...rs.rows[0] } : undefined;
+};
+
+users.count = async () => {
+  const rs = await client.execute('SELECT COUNT(*) as c FROM users');
+  return Number(rs.rows[0].c);
+};
+
 module.exports = {
   client,
   ready,
@@ -179,4 +199,5 @@ module.exports = {
   workers,
   applicationCases,
   visitsAudits,
+  users,
 };

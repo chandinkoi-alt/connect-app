@@ -201,6 +201,44 @@ select {
   font-family: var(--font-jp);
 }
 
+.user-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.user-name {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-family: var(--font-jp);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.user-action {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-family: var(--font-jp);
+  white-space: nowrap;
+  padding: 4px 6px;
+}
+
+.user-action:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .main-area {
   flex: 1;
   min-width: 0;

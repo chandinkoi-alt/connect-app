@@ -6,7 +6,7 @@
   <title>Connect – 技能実習・育成就労・特定技能 管理システム</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -57,6 +57,13 @@
           <div class="org-info">
             <div class="org-name">コネクト協同組合</div>
             <div class="org-role">監理団体・登録支援機関</div>
+          </div>
+        </div>
+        <div class="user-chip">
+          <span id="currentUserName" class="user-name"></span>
+          <div class="user-actions">
+            <button id="addAccountBtn" class="link-btn user-action">アカウント追加</button>
+            <button id="logoutBtn" class="link-btn user-action">ログアウト</button>
           </div>
         </div>
       </div>

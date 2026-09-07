@@ -1,6 +1,15 @@
+function handleAuthFailure(res) {
+  if (res.status === 401) {
+    window.location.href = '/login.html';
+    return true;
+  }
+  return false;
+}
+
 const api = {
   async get(url) {
     const res = await fetch(url);
+    if (handleAuthFailure(res)) return new Promise(() => {});
     return res.json();
   },
   async post(url, body) {
@@ -9,6 +18,7 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    if (handleAuthFailure(res)) return new Promise(() => {});
     const data = await res.json();
     if (!res.ok) throw data;
     return data;
@@ -19,12 +29,14 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    if (handleAuthFailure(res)) return new Promise(() => {});
     const data = await res.json();
     if (!res.ok) throw data;
     return data;
   },
   async del(url) {
     const res = await fetch(url, { method: 'DELETE' });
+    if (handleAuthFailure(res)) return new Promise(() => {});
     const data = await res.json();
     if (!res.ok) throw data;
     return data;
