@@ -1,0 +1,180 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+header {
+  background-color: #ffffff;
+  border-bottom: 2px solid #0284c7;
+  padding: 16px 30px;
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+}
+
+.brand {
+  font-weight: bold;
+  font-size: 20px;
+  color: #0284c7;
+}
+
+.sub-info {
+  font-size: 13px;
+  color: #64748b;
+}
+
+main {
+  padding: 25px 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 25px;
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #334155;
+}
+
+input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary {
+  width: 100%;
+  background-color: #0284c7;
+  color: #fff;
+  margin-top: 8px;
+}
+
+.btn-success {
+  background-color: #166534;
+  color: #fff;
+}
+
+.btn-small {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.preview {
+  margin-top: 15px;
+  font-size: 13px;
+}
+
+.preview .row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.preview .row.total {
+  font-weight: bold;
+  color: #166534;
+  border-bottom: none;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+th {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.empty-row td {
+  text-align: center;
+  color: #94a3b8;
+  padding: 30px 10px;
+}
+
+.link-delete {
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 12px;
+  background: none;
+  border: none;
+  font-weight: bold;
+}
