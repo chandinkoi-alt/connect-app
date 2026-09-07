@@ -1,3 +1,5 @@
+const STAGE_OPTIONS = ['入国前', '実習中', '帰国'];
+
 const TabWorkers = {
   visaTypes: [],
   statusTypes: [],
@@ -9,7 +11,7 @@ const TabWorkers = {
       <section class="stats-bar" id="statsBar"></section>
       <section class="card">
         <div class="card-title-row">
-          <h2 class="card-title">人材360（実習生・育成就労・特定技能 対象者）</h2>
+          <h2 class="card-title">人材一覧（実習生・育成就労・特定技能 対象者）</h2>
           <div class="row-actions">
             <button class="btn btn-success btn-small" id="exportRosterBtn">📥 名簿をExcel出力</button>
             <button class="btn btn-primary btn-small" id="addWorkerBtn">＋ 新規登録</button>
@@ -119,7 +121,7 @@ const TabWorkers = {
     const doneCount = (c) => c.checklist.filter((i) => i.done).length;
 
     Modal.open(
-      `${w.name}（人材360）`,
+      `${w.name}（人材一覧）`,
       `
       <div class="profile-grid">
         <div><label>フリガナ</label><div>${escapeHtml(w.nameKana) || '－'}</div></div>
@@ -134,6 +136,7 @@ const TabWorkers = {
         <div><label>受入企業</label><div>${escapeHtml(w.companyName) || '－'}</div></div>
         <div><label>送出機関</label><div>${escapeHtml(w.sendingOrgName) || '－'}</div></div>
         <div><label>職種・作業</label><div>${escapeHtml(w.jobCategory) || '－'}</div></div>
+        <div><label>現在の段階</label><div>${escapeHtml(w.currentStage) || '－'}</div></div>
       </div>
 
       <h4 class="section-title">労働条件</h4>
@@ -228,7 +231,13 @@ const TabWorkers = {
           <div class="form-group"><label>雇用契約開始日</label><input id="f_contractStartDate" type="date" value="${worker ? worker.contractStartDate || '' : ''}"></div>
           <div class="form-group"><label>雇用契約終了日</label><input id="f_contractEndDate" type="date" value="${worker ? worker.contractEndDate || '' : ''}"></div>
         </div>
-        <div class="form-group"><label>現在の段階</label><input id="f_currentStage" placeholder="入国前・実習中・帰国準備中 等" value="${worker ? escapeHtml(worker.currentStage) : ''}"></div>
+        <div class="form-group">
+          <label>現在の段階</label>
+          <select id="f_currentStage">
+            <option value="">選択</option>
+            ${STAGE_OPTIONS.map((s) => `<option value="${s}" ${worker && worker.currentStage === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
 
         <h4 class="section-title">労働条件</h4>
         <div class="form-row">

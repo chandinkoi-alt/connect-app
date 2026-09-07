@@ -9,9 +9,9 @@ const TabSendingOrgs = {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>名称</th><th>国</th><th>許可番号</th><th>担当者</th><th>電話番号</th><th></th></tr>
+              <tr><th>名称</th><th>国</th><th>許可番号</th><th>担当者</th><th>電話番号</th><th>総人数</th><th>実習中</th><th>入国待ち</th><th></th></tr>
             </thead>
-            <tbody id="orgTableBody"><tr><td colspan="6">読み込み中...</td></tr></tbody>
+            <tbody id="orgTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -25,7 +25,7 @@ const TabSendingOrgs = {
     const tbody = document.getElementById('orgTableBody');
     if (!tbody) return;
     if (!orgs.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">送出機関が登録されていません。</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">送出機関が登録されていません。</td></tr>';
       return;
     }
     tbody.innerHTML = orgs
@@ -37,6 +37,9 @@ const TabSendingOrgs = {
         <td>${escapeHtml(o.licenseNumber)}</td>
         <td>${escapeHtml(o.contactPerson)}</td>
         <td>${escapeHtml(o.contactPhone)}</td>
+        <td><strong>${o.totalWorkers}</strong></td>
+        <td>${o.trainingCount}</td>
+        <td>${o.waitingCount}</td>
         <td class="row-actions">
           <button class="link-btn link-edit" data-id="${o.id}" data-action="edit">編集</button>
           <button class="link-btn link-delete" data-id="${o.id}" data-action="delete">削除</button>

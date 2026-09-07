@@ -1,5 +1,5 @@
 const express = require('express');
-const { sendingOrgs } = require('../db');
+const { sendingOrgs, workers } = require('../db');
 
 const router = express.Router();
 
@@ -16,7 +16,20 @@ function buildRecord(body) {
 }
 
 router.get('/', async (req, res) => {
-  res.json(await sendingOrgs.list());
+  const orgs = await sendingOrgs.list();
+  const allWorkers = await workers.list();
+
+  const enriched = orgs.map((org) => {
+    const orgWorkers = allWorkers.filter((w) => w.sendingOrgId === org.id);
+    return {
+      ...org,
+      totalWorkers: orgWorkers.length,
+      trainingCount: orgWorkers.filter((w) => w.currentStage === '実習中').length,
+      waitingCount: orgWorkers.filter((w) => w.currentStage === '入国前').length,
+    };
+  });
+
+  res.json(enriched);
 });
 
 router.get('/:id', async (req, res) => {
