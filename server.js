@@ -69,6 +69,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 ready
   .then(() => {
+    const usingTurso = !!process.env.TURSO_DATABASE_URL;
+    console.log(
+      usingTurso
+        ? 'データベース: Turso（永続化・再起動しても消えません）'
+        : '警告: データベース: ローカルファイル（TURSO_DATABASE_URL未設定。Render等では再起動・再デプロイのたびに全データが消えます）'
+    );
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => {
