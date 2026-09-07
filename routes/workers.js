@@ -8,9 +8,9 @@ const router = express.Router();
 const VISA_TYPES = ['技能実習1号', '技能実習2号', '技能実習3号', '育成就労', '特定技能1号', '特定技能2号'];
 const STATUS_TYPES = ['技能実習', '育成就労', '特定技能'];
 
-function withJoins(worker) {
-  const company = worker.hostCompanyId ? hostCompanies.get(worker.hostCompanyId) : null;
-  const sendingOrg = worker.sendingOrgId ? sendingOrgs.get(worker.sendingOrgId) : null;
+async function withJoins(worker) {
+  const company = worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
+  const sendingOrg = worker.sendingOrgId ? await sendingOrgs.get(worker.sendingOrgId) : null;
   return {
     ...worker,
     companyName: company ? company.name : '',
@@ -64,9 +64,9 @@ function validate(body) {
 router.get('/visa-types', (req, res) => res.json(VISA_TYPES));
 router.get('/status-types', (req, res) => res.json(STATUS_TYPES));
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { statusType, hostCompanyId, search } = req.query;
-  let result = workers.list().map(withJoins);
+  let result = await Promise.all((await workers.list()).map(withJoins));
 
   if (statusType) result = result.filter((w) => w.statusType === statusType);
   if (hostCompanyId) result = result.filter((w) => w.hostCompanyId === Number(hostCompanyId));
@@ -92,43 +92,43 @@ router.get('/', (req, res) => {
 });
 
 // 人材360: 対象者の詳細プロフィール + 関連する認定申請・面談監査記録
-router.get('/:id/profile360', (req, res) => {
+router.get('/:id/profile360', async (req, res) => {
   const id = Number(req.params.id);
-  const worker = workers.get(id);
+  const worker = await workers.get(id);
   if (!worker) return res.status(404).json({ error: '対象者が見つかりません。' });
 
-  const cases = applicationCases.list().filter((c) => c.workerId === id);
-  const visits = visitsAudits.list().filter((v) => v.workerId === id);
+  const cases = (await applicationCases.list()).filter((c) => c.workerId === id);
+  const visits = (await visitsAudits.list()).filter((v) => v.workerId === id);
 
   res.json({
-    worker: withJoins(worker),
+    worker: await withJoins(worker),
     applicationCases: cases.map((c) => ({ ...c, checklist: JSON.parse(c.checklist || '[]') })),
     visits,
   });
 });
 
-router.get('/:id', (req, res) => {
-  const worker = workers.get(Number(req.params.id));
+router.get('/:id', async (req, res) => {
+  const worker = await workers.get(Number(req.params.id));
   if (!worker) return res.status(404).json({ error: '対象者が見つかりません。' });
-  res.json(withJoins(worker));
+  res.json(await withJoins(worker));
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const errors = validate(req.body);
   if (errors.length) return res.status(400).json({ errors });
-  res.status(201).json(withJoins(workers.insert(buildRecord(req.body))));
+  res.status(201).json(await withJoins(await workers.insert(buildRecord(req.body))));
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  if (!workers.get(id)) return res.status(404).json({ error: '対象者が見つかりません。' });
+  if (!(await workers.get(id))) return res.status(404).json({ error: '対象者が見つかりません。' });
   const errors = validate(req.body);
   if (errors.length) return res.status(400).json({ errors });
-  res.json(withJoins(workers.update(id, buildRecord(req.body))));
+  res.json(await withJoins(await workers.update(id, buildRecord(req.body))));
 });
 
-router.delete('/:id', (req, res) => {
-  const deleted = workers.remove(Number(req.params.id));
+router.delete('/:id', async (req, res) => {
+  const deleted = await workers.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '対象者が見つかりません。' });
   res.json({ ok: true });
 });
@@ -150,7 +150,8 @@ router.get('/export/roster', async (req, res) => {
     { header: '備考', key: 'notes', width: 24 },
   ];
   sheet.getRow(1).font = { bold: true };
-  workers.list().map(withJoins).forEach((w) => sheet.addRow(w));
+  const rosterRows = await Promise.all((await workers.list()).map(withJoins));
+  rosterRows.forEach((w) => sheet.addRow(w));
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename=meibo.xlsx');
@@ -159,9 +160,9 @@ router.get('/export/roster', async (req, res) => {
 });
 
 router.get('/:id/document', async (req, res) => {
-  const worker = workers.get(Number(req.params.id));
+  const worker = await workers.get(Number(req.params.id));
   if (!worker) return res.status(404).json({ error: '対象者が見つかりません。' });
-  const joined = withJoins(worker);
+  const joined = await withJoins(worker);
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('個人票');

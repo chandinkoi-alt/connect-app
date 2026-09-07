@@ -19,48 +19,48 @@ function buildRecord(body, existing = {}) {
 
 router.get('/stages', (req, res) => res.json(CANDIDATE_STAGES));
 
-router.get('/', (req, res) => {
-  res.json(candidates.list());
+router.get('/', async (req, res) => {
+  res.json(await candidates.list());
 });
 
-router.get('/:id', (req, res) => {
-  const candidate = candidates.get(Number(req.params.id));
+router.get('/:id', async (req, res) => {
+  const candidate = await candidates.get(Number(req.params.id));
   if (!candidate) return res.status(404).json({ error: '候補者が見つかりません。' });
   res.json(candidate);
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!req.body.name || !req.body.name.trim()) {
     return res.status(400).json({ errors: ['氏名は必須です。'] });
   }
-  res.status(201).json(candidates.insert(buildRecord(req.body)));
+  res.status(201).json(await candidates.insert(buildRecord(req.body)));
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = candidates.get(id);
+  const existing = await candidates.get(id);
   if (!existing) return res.status(404).json({ error: '候補者が見つかりません。' });
   if (!req.body.name || !req.body.name.trim()) {
     return res.status(400).json({ errors: ['氏名は必須です。'] });
   }
-  res.json(candidates.update(id, buildRecord(req.body, existing)));
+  res.json(await candidates.update(id, buildRecord(req.body, existing)));
 });
 
 // カンバンでのステージ変更のみを行う（他の必須項目は不要）
-router.put('/:id/stage', (req, res) => {
+router.put('/:id/stage', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = candidates.get(id);
+  const existing = await candidates.get(id);
   if (!existing) return res.status(404).json({ error: '候補者が見つかりません。' });
   if (!CANDIDATE_STAGES.includes(req.body.stage)) {
     return res.status(400).json({ errors: ['ステージを正しく選択してください。'] });
   }
-  res.json(candidates.update(id, { ...existing, stage: req.body.stage }));
+  res.json(await candidates.update(id, { ...existing, stage: req.body.stage }));
 });
 
 // 採用確定した候補者を実習生・対象者として登録し、認定申請の下書きを自動作成する
-router.post('/:id/hire', (req, res) => {
+router.post('/:id/hire', async (req, res) => {
   const id = Number(req.params.id);
-  const candidate = candidates.get(id);
+  const candidate = await candidates.get(id);
   if (!candidate) return res.status(404).json({ error: '候補者が見つかりません。' });
 
   const { hostCompanyId, statusType, visaType, visaExpiryDate } = req.body;
@@ -71,7 +71,7 @@ router.post('/:id/hire', (req, res) => {
   if (!visaExpiryDate) errors.push('在留期限を入力してください。');
   if (errors.length) return res.status(400).json({ errors });
 
-  const worker = workers.insert({
+  const worker = await workers.insert({
     name: candidate.name,
     nameKana: '',
     nationality: candidate.nationality,
@@ -102,7 +102,7 @@ router.post('/:id/hire', (req, res) => {
     insuranceStatus: '',
   });
 
-  const applicationCase = applicationCases.insert({
+  const applicationCase = await applicationCases.insert({
     workerId: worker.id,
     statusType,
     stage: '初回申請',
@@ -114,13 +114,13 @@ router.post('/:id/hire', (req, res) => {
     checklist: JSON.stringify(buildChecklist(statusType)),
   });
 
-  candidates.update(id, buildRecord({ ...candidate, stage: '採用確定' }, candidate));
+  await candidates.update(id, buildRecord({ ...candidate, stage: '採用確定' }, candidate));
 
   res.status(201).json({ worker, applicationCase });
 });
 
-router.delete('/:id', (req, res) => {
-  const deleted = candidates.remove(Number(req.params.id));
+router.delete('/:id', async (req, res) => {
+  const deleted = await candidates.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '候補者が見つかりません。' });
   res.json({ ok: true });
 });
