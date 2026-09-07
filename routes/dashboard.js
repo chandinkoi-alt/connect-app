@@ -1,5 +1,5 @@
 const express = require('express');
-const { workers, hostCompanies, applicationCases, visitsAudits } = require('../db');
+const { workers, hostCompanies, applicationCases, visitsAudits, companyRegistrations, workerRegistrations } = require('../db');
 const { getDaysUntil, getUrgency } = require('../lib/dates');
 
 const router = express.Router();
@@ -56,6 +56,42 @@ async function buildTasks() {
         level: urgency.level,
         days: urgency.days,
         link: { tab: 'visits', id: v.id },
+      });
+    }
+  }
+
+  const allCompanyRegs = await companyRegistrations.list();
+  for (const r of allCompanyRegs) {
+    if (!r.expiryDate) continue;
+    const urgency = getUrgency(getDaysUntil(r.expiryDate));
+    if (urgency.level === 'expired' || urgency.level === 'warning') {
+      const company = await hostCompanies.get(r.hostCompanyId);
+      tasks.push({
+        id: `company-reg-${r.id}`,
+        category: '企業 登録・許認可',
+        title: `${company ? company.name : '企業'} の${r.label}`,
+        dueDate: r.expiryDate,
+        level: urgency.level,
+        days: urgency.days,
+        link: { tab: 'companies', id: r.hostCompanyId },
+      });
+    }
+  }
+
+  const allWorkerRegs = await workerRegistrations.list();
+  for (const r of allWorkerRegs) {
+    if (!r.expiryDate) continue;
+    const urgency = getUrgency(getDaysUntil(r.expiryDate));
+    if (urgency.level === 'expired' || urgency.level === 'warning') {
+      const worker = await workers.get(r.workerId);
+      tasks.push({
+        id: `worker-reg-${r.id}`,
+        category: '対象者 登録・保険',
+        title: `${worker ? worker.name : '対象者'} の${r.label}`,
+        dueDate: r.expiryDate,
+        level: urgency.level,
+        days: urgency.days,
+        link: { tab: 'workers', id: r.workerId },
       });
     }
   }

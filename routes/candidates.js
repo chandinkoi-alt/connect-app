@@ -1,6 +1,7 @@
 const express = require('express');
 const { candidates, workers, applicationCases } = require('../db');
 const { buildChecklist } = require('../lib/checklists');
+const { buildSpecialHealthChecks } = require('../lib/healthChecks');
 
 const router = express.Router();
 
@@ -90,7 +91,7 @@ router.post('/:id/hire', async (req, res) => {
     phone: '',
     notes: `候補者ID ${candidate.id} より登録`,
     statusType,
-    currentStage: '入国前',
+    currentStage: '準備中',
     baseSalary: null,
     workingHours: '',
     overtimeRate: '',
@@ -98,6 +99,7 @@ router.post('/:id/hire', async (req, res) => {
     deductions: '',
     dormitoryInfo: '',
     healthCheckDate: '',
+    specialHealthChecks: JSON.stringify(buildSpecialHealthChecks()),
     consultationContact: '',
     insuranceStatus: '',
   });

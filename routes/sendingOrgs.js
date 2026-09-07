@@ -24,8 +24,8 @@ router.get('/', async (req, res) => {
     return {
       ...org,
       totalWorkers: orgWorkers.length,
-      trainingCount: orgWorkers.filter((w) => w.currentStage === '実習中').length,
-      waitingCount: orgWorkers.filter((w) => w.currentStage === '入国前').length,
+      trainingCount: orgWorkers.filter((w) => w.currentStage === '就労中').length,
+      waitingCount: orgWorkers.filter((w) => w.currentStage === '準備中').length,
     };
   });
 

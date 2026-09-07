@@ -1,4 +1,6 @@
 const TabCompanies = {
+  dormitoryOptions: { roomSizeOptions: [], lockOptions: [] },
+
   async render(container) {
     container.innerHTML = `
       <section class="card">
@@ -9,13 +11,14 @@ const TabCompanies = {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>企業名</th><th>所在地</th><th>担当者</th><th>技能指導員</th><th>電話番号</th><th></th></tr>
+              <tr><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th></th></tr>
             </thead>
             <tbody id="companyTableBody"><tr><td colspan="6">読み込み中...</td></tr></tbody>
           </table>
         </div>
       </section>
     `;
+    this.dormitoryOptions = await api.get('/api/host-companies/dormitory-options');
     document.getElementById('addCompanyBtn').addEventListener('click', () => this.openEditForm());
     await this.load();
   },
@@ -33,9 +36,9 @@ const TabCompanies = {
         (c) => `
       <tr>
         <td><a href="#" class="link-view" data-id="${c.id}">${escapeHtml(c.name)}</a></td>
+        <td>${escapeHtml(c.industry)}</td>
         <td>${escapeHtml(c.address)}</td>
         <td>${escapeHtml(c.contactPerson)}</td>
-        <td>${escapeHtml(c.skillInstructor)}</td>
         <td>${escapeHtml(c.phone)}</td>
         <td class="row-actions">
           <button class="link-btn link-edit" data-id="${c.id}" data-action="edit">編集</button>
@@ -60,42 +63,184 @@ const TabCompanies = {
     });
   },
 
-  openProfile(company) {
+  async openProfile(company) {
+    const [regs, audits] = await Promise.all([
+      api.get(`/api/host-companies/${company.id}/registrations`),
+      api.get(`/api/visits?hostCompanyId=${company.id}&type=${encodeURIComponent('監査')}`),
+    ]);
+    const completedAudits = audits.filter((a) => a.completedDate).sort((a, b) => (a.completedDate < b.completedDate ? 1 : -1));
+    const lastAuditDate = completedAudits.length ? completedAudits[0].completedDate : '';
+
     Modal.open(
       `${company.name}（受入企業一覧）`,
       `
       <div class="profile-grid">
+        <div><label>業種</label><div>${escapeHtml(company.industry) || '－'}</div></div>
         <div><label>所在地</label><div>${escapeHtml(company.address) || '－'}</div></div>
         <div><label>担当者</label><div>${escapeHtml(company.contactPerson) || '－'}</div></div>
+        <div><label>電話番号</label><div>${escapeHtml(company.phone) || '－'}</div></div>
+        <div><label>メール</label><div>${escapeHtml(company.email) || '－'}</div></div>
+        <div><label>受入開始日</label><div>${escapeHtml(company.acceptanceStartDate) || '－'}</div></div>
+        <div><label>直近監査日</label><div>${escapeHtml(lastAuditDate) || '－'}</div></div>
+        <div><label>代表者</label><div>${escapeHtml(company.representativeName) || '－'}</div></div>
+        <div><label>常勤職員数</label><div>${company.regularEmployeeCount ?? '－'}</div></div>
+        <div><label>実習責任者</label><div>${escapeHtml(company.trainingManagerName) || '－'}</div></div>
         <div><label>技能指導員</label><div>${escapeHtml(company.skillInstructor) || '－'}</div></div>
         <div><label>生活指導員</label><div>${escapeHtml(company.lifeInstructor) || '－'}</div></div>
-        <div><label>電話番号</label><div>${escapeHtml(company.phone) || '－'}</div></div>
-        <div class="span-2"><label>宿舎情報</label><div>${escapeHtml(company.dormitoryInfo) || '－'}</div></div>
-        <div class="span-2"><label>備考</label><div>${escapeHtml(company.notes) || '－'}</div></div>
       </div>
-      <button class="btn btn-primary" id="profileEditBtn">編集する</button>
+
+      <h4 class="section-title">宿舎情報</h4>
+      <div class="profile-grid">
+        <div class="span-2"><label>宿舎住所</label><div>${escapeHtml(company.dormitoryAddress) || '－'}</div></div>
+        <div><label>月額費用（本人負担）</label><div>${company.dormitoryMonthlyFee ? company.dormitoryMonthlyFee.toLocaleString('ja-JP') + ' 円' : '－'}</div></div>
+        <div><label>居室面積基準</label><div>${escapeHtml(company.dormitoryRoomSizeOk) || '－'}</div></div>
+        <div><label>個室の鍵</label><div>${escapeHtml(company.dormitoryHasLock) || '－'}</div></div>
+        <div><label>貴重品保管設備</label><div>${escapeHtml(company.dormitoryHasValuablesStorage) || '－'}</div></div>
+        <div class="span-2"><label>宿舎に関する備考</label><div>${escapeHtml(company.dormitoryInfo) || '－'}</div></div>
+      </div>
+
+      <div class="span-2"><label>備考</label><div>${escapeHtml(company.notes) || '－'}</div></div>
+
+      <h4 class="section-title">登録・保険・許認可（${regs.length}件）</h4>
+      <div id="companyRegsList">${this.renderRegistrations(regs)}</div>
+      <div class="form-row" style="margin-top:10px;">
+        <div class="form-group"><label>項目名</label><input id="newRegLabel" placeholder="例: 36協定, 建設業許可"></div>
+        <div class="form-group"><label>登録・許可番号</label><input id="newRegNumber"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>発行日</label><input id="newRegIssueDate" type="date"></div>
+        <div class="form-group"><label>有効期限</label><input id="newRegExpiryDate" type="date"></div>
+      </div>
+      <button class="btn btn-secondary btn-small" id="addRegBtn" style="width:auto;">追加する</button>
+
+      <div class="form-actions" style="margin-top:15px;">
+        <button class="btn btn-primary" id="profileEditBtn">基本情報を編集する</button>
+      </div>
     `
     );
+
+    const modalBox = document.querySelector('.modal-box');
+    if (modalBox) modalBox.style.maxWidth = '720px';
+
     document.getElementById('profileEditBtn').addEventListener('click', () => this.openEditForm(company));
+    this.wireRegistrationHandlers(company.id);
+  },
+
+  renderRegistrations(regs) {
+    if (!regs.length) return '<div class="empty-hint">登録項目がありません。</div>';
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
+    return `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>項目名</th><th>番号</th><th>発行日</th><th>有効期限</th><th>状態</th><th></th></tr></thead>
+          <tbody>
+            ${regs
+              .map((r) => {
+                const urgency = getExpiryUrgency(r.expiryDate);
+                return `
+              <tr data-reg-id="${r.id}">
+                <td><input class="reg-label" value="${escapeHtml(r.label)}" style="min-width:120px;"></td>
+                <td><input class="reg-number" value="${escapeHtml(r.registrationNumber)}" style="min-width:100px;"></td>
+                <td><input class="reg-issue" type="date" value="${r.issueDate || ''}"></td>
+                <td><input class="reg-expiry" type="date" value="${r.expiryDate || ''}"></td>
+                <td><span class="badge ${badgeClass[urgency.level]}">${urgency.label}</span></td>
+                <td><button class="link-btn link-delete" data-action="delete-reg" data-id="${r.id}">削除</button></td>
+              </tr>`;
+              })
+              .join('')}
+          </tbody>
+        </table>
+      </div>`;
+  },
+
+  wireRegistrationHandlers(companyId) {
+    document.querySelectorAll('#companyRegsList tr[data-reg-id]').forEach((row) => {
+      const regId = row.dataset.regId;
+      const save = async () => {
+        await api.put(`/api/host-companies/${companyId}/registrations/${regId}`, {
+          label: row.querySelector('.reg-label').value,
+          registrationNumber: row.querySelector('.reg-number').value,
+          issueDate: row.querySelector('.reg-issue').value,
+          expiryDate: row.querySelector('.reg-expiry').value,
+        });
+      };
+      row.querySelectorAll('input').forEach((input) => input.addEventListener('change', save));
+    });
+
+    document.querySelectorAll('button[data-action="delete-reg"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await api.del(`/api/host-companies/${companyId}/registrations/${btn.dataset.id}`);
+        const regs = await api.get(`/api/host-companies/${companyId}/registrations`);
+        document.getElementById('companyRegsList').innerHTML = this.renderRegistrations(regs);
+        this.wireRegistrationHandlers(companyId);
+      });
+    });
+
+    document.getElementById('addRegBtn').addEventListener('click', async () => {
+      const label = document.getElementById('newRegLabel').value;
+      if (!label.trim()) return;
+      await api.post(`/api/host-companies/${companyId}/registrations`, {
+        label,
+        registrationNumber: document.getElementById('newRegNumber').value,
+        issueDate: document.getElementById('newRegIssueDate').value,
+        expiryDate: document.getElementById('newRegExpiryDate').value,
+      });
+      const regs = await api.get(`/api/host-companies/${companyId}/registrations`);
+      document.getElementById('companyRegsList').innerHTML = this.renderRegistrations(regs);
+      this.wireRegistrationHandlers(companyId);
+      document.getElementById('newRegLabel').value = '';
+      document.getElementById('newRegNumber').value = '';
+      document.getElementById('newRegIssueDate').value = '';
+      document.getElementById('newRegExpiryDate').value = '';
+    });
   },
 
   openEditForm(company) {
     const isEdit = !!company;
+    const roomSizeOpts = this.dormitoryOptions.roomSizeOptions || [];
+    const lockOpts = this.dormitoryOptions.lockOptions || [];
+    const selectHtml = (id, options, current) =>
+      `<select id="${id}"><option value="">選択</option>${options.map((o) => `<option value="${o}" ${current === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+
     Modal.open(
       isEdit ? '受入企業 編集' : '受入企業 新規登録',
       `
       <form id="companyForm">
-        <div class="form-group"><label>企業名 *</label><input id="f_name" required value="${company ? escapeHtml(company.name) : ''}"></div>
+        <div class="form-row">
+          <div class="form-group"><label>企業名 *</label><input id="f_name" required value="${company ? escapeHtml(company.name) : ''}"></div>
+          <div class="form-group"><label>業種</label><input id="f_industry" value="${company ? escapeHtml(company.industry) : ''}"></div>
+        </div>
         <div class="form-group"><label>所在地</label><input id="f_address" value="${company ? escapeHtml(company.address) : ''}"></div>
         <div class="form-row">
           <div class="form-group"><label>担当者</label><input id="f_contactPerson" value="${company ? escapeHtml(company.contactPerson) : ''}"></div>
           <div class="form-group"><label>電話番号</label><input id="f_phone" value="${company ? escapeHtml(company.phone) : ''}"></div>
         </div>
         <div class="form-row">
+          <div class="form-group"><label>メール</label><input id="f_email" value="${company ? escapeHtml(company.email) : ''}"></div>
+          <div class="form-group"><label>受入開始日</label><input id="f_acceptanceStartDate" type="date" value="${company ? company.acceptanceStartDate || '' : ''}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>代表者</label><input id="f_representativeName" value="${company ? escapeHtml(company.representativeName) : ''}"></div>
+          <div class="form-group"><label>常勤職員数</label><input id="f_regularEmployeeCount" type="number" value="${company && company.regularEmployeeCount ? company.regularEmployeeCount : ''}"></div>
+        </div>
+        <div class="form-group"><label>技能実習・育成就労責任者</label><input id="f_trainingManagerName" value="${company ? escapeHtml(company.trainingManagerName) : ''}"></div>
+        <div class="form-row">
           <div class="form-group"><label>技能指導員</label><input id="f_skillInstructor" value="${company ? escapeHtml(company.skillInstructor) : ''}"></div>
           <div class="form-group"><label>生活指導員</label><input id="f_lifeInstructor" value="${company ? escapeHtml(company.lifeInstructor) : ''}"></div>
         </div>
-        <div class="form-group"><label>宿舎情報</label><input id="f_dormitoryInfo" value="${company ? escapeHtml(company.dormitoryInfo) : ''}"></div>
+
+        <h4 class="section-title">宿舎情報</h4>
+        <div class="form-group"><label>宿舎住所</label><input id="f_dormitoryAddress" value="${company ? escapeHtml(company.dormitoryAddress) : ''}"></div>
+        <div class="form-row">
+          <div class="form-group"><label>月額費用（本人負担・円）</label><input id="f_dormitoryMonthlyFee" type="number" value="${company && company.dormitoryMonthlyFee ? company.dormitoryMonthlyFee : ''}"></div>
+          <div class="form-group"><label>居室面積基準</label>${selectHtml('f_dormitoryRoomSizeOk', roomSizeOpts, company ? company.dormitoryRoomSizeOk : '')}</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>個室の鍵</label>${selectHtml('f_dormitoryHasLock', lockOpts, company ? company.dormitoryHasLock : '')}</div>
+          <div class="form-group"><label>貴重品保管設備</label>${selectHtml('f_dormitoryHasValuablesStorage', lockOpts, company ? company.dormitoryHasValuablesStorage : '')}</div>
+        </div>
+        <div class="form-group"><label>宿舎に関する備考</label><input id="f_dormitoryInfo" value="${company ? escapeHtml(company.dormitoryInfo) : ''}"></div>
+
         <div class="form-group"><label>備考</label><input id="f_notes" value="${company ? escapeHtml(company.notes) : ''}"></div>
         <div id="formErrors" class="alert-error" hidden></div>
         <button type="submit" class="btn btn-primary">${isEdit ? '更新する' : '登録する'}</button>
@@ -103,17 +248,32 @@ const TabCompanies = {
     `
     );
 
+    const modalBox = document.querySelector('.modal-box');
+    if (modalBox) modalBox.style.maxWidth = '640px';
+
     document.getElementById('companyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const val = (id) => document.getElementById(id).value;
       const body = {
-        name: document.getElementById('f_name').value,
-        address: document.getElementById('f_address').value,
-        contactPerson: document.getElementById('f_contactPerson').value,
-        phone: document.getElementById('f_phone').value,
-        skillInstructor: document.getElementById('f_skillInstructor').value,
-        lifeInstructor: document.getElementById('f_lifeInstructor').value,
-        dormitoryInfo: document.getElementById('f_dormitoryInfo').value,
-        notes: document.getElementById('f_notes').value,
+        name: val('f_name'),
+        industry: val('f_industry'),
+        address: val('f_address'),
+        contactPerson: val('f_contactPerson'),
+        phone: val('f_phone'),
+        email: val('f_email'),
+        acceptanceStartDate: val('f_acceptanceStartDate'),
+        representativeName: val('f_representativeName'),
+        regularEmployeeCount: val('f_regularEmployeeCount'),
+        trainingManagerName: val('f_trainingManagerName'),
+        skillInstructor: val('f_skillInstructor'),
+        lifeInstructor: val('f_lifeInstructor'),
+        dormitoryAddress: val('f_dormitoryAddress'),
+        dormitoryMonthlyFee: val('f_dormitoryMonthlyFee'),
+        dormitoryRoomSizeOk: val('f_dormitoryRoomSizeOk'),
+        dormitoryHasLock: val('f_dormitoryHasLock'),
+        dormitoryHasValuablesStorage: val('f_dormitoryHasValuablesStorage'),
+        dormitoryInfo: val('f_dormitoryInfo'),
+        notes: val('f_notes'),
         status: 'active',
       };
       try {

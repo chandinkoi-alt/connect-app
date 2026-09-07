@@ -22,15 +22,36 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS host_companies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    industry TEXT,
     address TEXT,
     contactPerson TEXT,
+    phone TEXT,
+    email TEXT,
+    acceptanceStartDate TEXT,
+    representativeName TEXT,
+    regularEmployeeCount INTEGER,
+    trainingManagerName TEXT,
     skillInstructor TEXT,
     lifeInstructor TEXT,
+    dormitoryAddress TEXT,
+    dormitoryMonthlyFee INTEGER,
+    dormitoryRoomSizeOk TEXT,
+    dormitoryHasLock TEXT,
+    dormitoryHasValuablesStorage TEXT,
     dormitoryInfo TEXT,
-    phone TEXT,
     notes TEXT,
     status TEXT NOT NULL DEFAULT 'lead',
     leadStage TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS company_registrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hostCompanyId INTEGER NOT NULL REFERENCES host_companies(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    registrationNumber TEXT,
+    issueDate TEXT,
+    expiryDate TEXT,
+    notes TEXT
   );
 
   CREATE TABLE IF NOT EXISTS candidates (
@@ -51,28 +72,49 @@ const SCHEMA = `
     gender TEXT,
     dob TEXT,
     passportNumber TEXT,
+    passportExpiryDate TEXT,
     residenceCardNumber TEXT,
     visaType TEXT NOT NULL,
     visaExpiryDate TEXT NOT NULL,
     entryDate TEXT,
+    trainingStartDate TEXT,
     hostCompanyId INTEGER REFERENCES host_companies(id) ON DELETE SET NULL,
     sendingOrgId INTEGER REFERENCES sending_organizations(id) ON DELETE SET NULL,
     jobCategory TEXT,
     contractStartDate TEXT,
     contractEndDate TEXT,
     phone TEXT,
+    homeCountryAddress TEXT,
     notes TEXT,
     statusType TEXT NOT NULL DEFAULT '技能実習',
     currentStage TEXT,
     baseSalary INTEGER,
     workingHours TEXT,
+    workStartTime TEXT,
+    workEndTime TEXT,
+    holidays TEXT,
+    payDate TEXT,
     overtimeRate TEXT,
     allowances TEXT,
     deductions TEXT,
+    educationWorkHistory TEXT,
     dormitoryInfo TEXT,
     healthCheckDate TEXT,
+    specialHealthChecks TEXT,
     consultationContact TEXT,
-    insuranceStatus TEXT
+    insuranceStatus TEXT,
+    tokuteiTrainingStatus TEXT,
+    tokuteiTrainingDate TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS worker_registrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workerId INTEGER NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    registrationNumber TEXT,
+    issueDate TEXT,
+    expiryDate TEXT,
+    notes TEXT
   );
 
   CREATE TABLE IF NOT EXISTS application_cases (
@@ -134,7 +176,46 @@ const SCHEMA = `
   );
 `;
 
-const ready = client.executeMultiple(SCHEMA);
+// 既存の本番データベース（Turso）にはこれらの列が無い可能性があるため、
+// CREATE TABLE IF NOT EXISTS では追加されない列を ALTER TABLE で補完する。
+// NOT NULL 制約のある元からの列（name, visaType 等）は必ず存在するため対象外。
+const MIGRATION_COLUMNS = {
+  host_companies: [
+    ['industry', 'TEXT'], ['address', 'TEXT'], ['contactPerson', 'TEXT'], ['phone', 'TEXT'],
+    ['email', 'TEXT'], ['acceptanceStartDate', 'TEXT'], ['representativeName', 'TEXT'],
+    ['regularEmployeeCount', 'INTEGER'], ['trainingManagerName', 'TEXT'], ['skillInstructor', 'TEXT'],
+    ['lifeInstructor', 'TEXT'], ['dormitoryAddress', 'TEXT'], ['dormitoryMonthlyFee', 'INTEGER'],
+    ['dormitoryRoomSizeOk', 'TEXT'], ['dormitoryHasLock', 'TEXT'], ['dormitoryHasValuablesStorage', 'TEXT'],
+    ['dormitoryInfo', 'TEXT'], ['notes', 'TEXT'], ['leadStage', 'TEXT'],
+  ],
+  workers: [
+    ['nameKana', 'TEXT'], ['nationality', 'TEXT'], ['gender', 'TEXT'], ['dob', 'TEXT'],
+    ['passportNumber', 'TEXT'], ['passportExpiryDate', 'TEXT'], ['residenceCardNumber', 'TEXT'],
+    ['entryDate', 'TEXT'], ['trainingStartDate', 'TEXT'], ['hostCompanyId', 'INTEGER'],
+    ['sendingOrgId', 'INTEGER'], ['jobCategory', 'TEXT'], ['contractStartDate', 'TEXT'],
+    ['contractEndDate', 'TEXT'], ['phone', 'TEXT'], ['homeCountryAddress', 'TEXT'], ['notes', 'TEXT'],
+    ['currentStage', 'TEXT'], ['baseSalary', 'INTEGER'], ['workingHours', 'TEXT'],
+    ['workStartTime', 'TEXT'], ['workEndTime', 'TEXT'], ['holidays', 'TEXT'], ['payDate', 'TEXT'],
+    ['overtimeRate', 'TEXT'], ['allowances', 'TEXT'], ['deductions', 'TEXT'],
+    ['educationWorkHistory', 'TEXT'], ['dormitoryInfo', 'TEXT'], ['healthCheckDate', 'TEXT'],
+    ['specialHealthChecks', 'TEXT'], ['consultationContact', 'TEXT'], ['insuranceStatus', 'TEXT'],
+    ['tokuteiTrainingStatus', 'TEXT'], ['tokuteiTrainingDate', 'TEXT'],
+  ],
+};
+
+async function migrateSchema() {
+  for (const [table, cols] of Object.entries(MIGRATION_COLUMNS)) {
+    const info = await client.execute(`PRAGMA table_info(${table})`);
+    const existing = new Set(info.rows.map((row) => row.name));
+    for (const [name, type] of cols) {
+      if (!existing.has(name)) {
+        await client.execute(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+      }
+    }
+  }
+}
+
+const ready = client.executeMultiple(SCHEMA).then(() => migrateSchema());
 
 function makeRepo(table, columns) {
   const repo = {
@@ -180,21 +261,49 @@ const sendingOrgs = makeRepo('sending_organizations', [
 ]);
 
 const hostCompanies = makeRepo('host_companies', [
-  'name', 'address', 'contactPerson', 'skillInstructor', 'lifeInstructor',
-  'dormitoryInfo', 'phone', 'notes', 'status', 'leadStage',
+  'name', 'industry', 'address', 'contactPerson', 'phone', 'email', 'acceptanceStartDate',
+  'representativeName', 'regularEmployeeCount', 'trainingManagerName', 'skillInstructor', 'lifeInstructor',
+  'dormitoryAddress', 'dormitoryMonthlyFee', 'dormitoryRoomSizeOk', 'dormitoryHasLock',
+  'dormitoryHasValuablesStorage', 'dormitoryInfo', 'notes', 'status', 'leadStage',
 ]);
+
+const companyRegistrations = makeRepo('company_registrations', [
+  'hostCompanyId', 'label', 'registrationNumber', 'issueDate', 'expiryDate', 'notes',
+]);
+
+companyRegistrations.listByCompany = async (hostCompanyId) => {
+  const rs = await client.execute({
+    sql: 'SELECT * FROM company_registrations WHERE hostCompanyId = ? ORDER BY id',
+    args: [hostCompanyId],
+  });
+  return rs.rows.map((row) => ({ ...row }));
+};
 
 const candidates = makeRepo('candidates', [
   'name', 'nationality', 'sendingOrgId', 'interviewDate', 'stage', 'notes',
 ]);
 
 const workers = makeRepo('workers', [
-  'name', 'nameKana', 'nationality', 'gender', 'dob', 'passportNumber', 'residenceCardNumber',
-  'visaType', 'visaExpiryDate', 'entryDate', 'hostCompanyId', 'sendingOrgId', 'jobCategory',
-  'contractStartDate', 'contractEndDate', 'phone', 'notes', 'statusType', 'currentStage',
-  'baseSalary', 'workingHours', 'overtimeRate', 'allowances', 'deductions', 'dormitoryInfo',
-  'healthCheckDate', 'consultationContact', 'insuranceStatus',
+  'name', 'nameKana', 'nationality', 'gender', 'dob', 'passportNumber', 'passportExpiryDate',
+  'residenceCardNumber', 'visaType', 'visaExpiryDate', 'entryDate', 'trainingStartDate',
+  'hostCompanyId', 'sendingOrgId', 'jobCategory', 'contractStartDate', 'contractEndDate', 'phone',
+  'homeCountryAddress', 'notes', 'statusType', 'currentStage', 'baseSalary', 'workingHours',
+  'workStartTime', 'workEndTime', 'holidays', 'payDate', 'overtimeRate', 'allowances', 'deductions',
+  'educationWorkHistory', 'dormitoryInfo', 'healthCheckDate', 'specialHealthChecks',
+  'consultationContact', 'insuranceStatus', 'tokuteiTrainingStatus', 'tokuteiTrainingDate',
 ]);
+
+const workerRegistrations = makeRepo('worker_registrations', [
+  'workerId', 'label', 'registrationNumber', 'issueDate', 'expiryDate', 'notes',
+]);
+
+workerRegistrations.listByWorker = async (workerId) => {
+  const rs = await client.execute({
+    sql: 'SELECT * FROM worker_registrations WHERE workerId = ? ORDER BY id',
+    args: [workerId],
+  });
+  return rs.rows.map((row) => ({ ...row }));
+};
 
 const applicationCases = makeRepo('application_cases', [
   'workerId', 'statusType', 'stage', 'status', 'dueDate', 'submittedDate', 'approvedDate', 'notes', 'checklist',
@@ -253,8 +362,10 @@ module.exports = {
   ready,
   sendingOrgs,
   hostCompanies,
+  companyRegistrations,
   candidates,
   workers,
+  workerRegistrations,
   applicationCases,
   visitsAudits,
   users,
