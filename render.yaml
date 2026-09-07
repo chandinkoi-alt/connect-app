@@ -9,6 +9,11 @@ services:
         value: コネクト協同組合
       - key: PERMIT_NO
         value: 許1808000401
-    # 無料プランは永続ディスクに対応していないため、DB (data.sqlite3) は
-    # サービスの再起動では保持されますが、再デプロイのたびにリセットされます。
-    # 有料プランに切り替える場合は DB_PATH と disk 設定を追加してください。
+      # Turso (libSQL) の接続情報。Render無料プランは永続ディスクに対応しておらず、
+      # サービスが再起動・スリープするとローカルファイルのDBは消えてしまうため、
+      # 外部の永続DBであるTursoを使う。値はRenderダッシュボードで手動設定する
+      # （sync: false = render.yamlに平文で書かない、Secretとして管理）。
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

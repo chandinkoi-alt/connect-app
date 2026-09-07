@@ -22,58 +22,58 @@ function buildRecord(body, existing = {}) {
 
 router.get('/lead-stages', (req, res) => res.json(LEAD_STAGES));
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { status } = req.query;
-  let result = hostCompanies.list();
+  let result = await hostCompanies.list();
   if (status) result = result.filter((c) => c.status === status);
   res.json(result);
 });
 
-router.get('/:id', (req, res) => {
-  const company = hostCompanies.get(Number(req.params.id));
+router.get('/:id', async (req, res) => {
+  const company = await hostCompanies.get(Number(req.params.id));
   if (!company) return res.status(404).json({ error: '企業が見つかりません。' });
   res.json(company);
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!req.body.name || !req.body.name.trim()) {
     return res.status(400).json({ errors: ['企業名は必須です。'] });
   }
-  res.status(201).json(hostCompanies.insert(buildRecord(req.body)));
+  res.status(201).json(await hostCompanies.insert(buildRecord(req.body)));
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = hostCompanies.get(id);
+  const existing = await hostCompanies.get(id);
   if (!existing) return res.status(404).json({ error: '企業が見つかりません。' });
   if (!req.body.name || !req.body.name.trim()) {
     return res.status(400).json({ errors: ['企業名は必須です。'] });
   }
-  res.json(hostCompanies.update(id, buildRecord(req.body, existing)));
+  res.json(await hostCompanies.update(id, buildRecord(req.body, existing)));
 });
 
 // カンバンでのステージ変更のみを行う（他の必須項目は不要）
-router.put('/:id/stage', (req, res) => {
+router.put('/:id/stage', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = hostCompanies.get(id);
+  const existing = await hostCompanies.get(id);
   if (!existing) return res.status(404).json({ error: '企業が見つかりません。' });
   if (!LEAD_STAGES.includes(req.body.leadStage)) {
     return res.status(400).json({ errors: ['ステージを正しく選択してください。'] });
   }
-  res.json(hostCompanies.update(id, { ...existing, leadStage: req.body.leadStage }));
+  res.json(await hostCompanies.update(id, { ...existing, leadStage: req.body.leadStage }));
 });
 
 // リードを正式な実習実施者（受入企業）として登録する
-router.post('/:id/convert', (req, res) => {
+router.post('/:id/convert', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = hostCompanies.get(id);
+  const existing = await hostCompanies.get(id);
   if (!existing) return res.status(404).json({ error: '企業が見つかりません。' });
   const record = buildRecord({ ...existing, status: 'active' }, existing);
-  res.json(hostCompanies.update(id, record));
+  res.json(await hostCompanies.update(id, record));
 });
 
-router.delete('/:id', (req, res) => {
-  const deleted = hostCompanies.remove(Number(req.params.id));
+router.delete('/:id', async (req, res) => {
+  const deleted = await hostCompanies.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '企業が見つかりません。' });
   res.json({ ok: true });
 });

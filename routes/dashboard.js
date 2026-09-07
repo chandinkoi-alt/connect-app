@@ -4,26 +4,11 @@ const { getDaysUntil, getUrgency } = require('../lib/dates');
 
 const router = express.Router();
 
-router.get('/stats', (req, res) => {
-  const allWorkers = workers.list();
-  const allCompanies = hostCompanies.list();
-  const allCases = applicationCases.list();
-
-  const urgentTasks = buildTasks().filter((t) => t.level === 'expired' || t.level === 'warning');
-
-  res.json({
-    activeWorkers: allWorkers.length,
-    hostCompanies: allCompanies.filter((c) => c.status === 'active').length,
-    processingCases: allCases.filter((c) => c.status !== '認定済み').length,
-    urgentCount: urgentTasks.filter((t) => t.level === 'expired').length,
-    warningCount: urgentTasks.filter((t) => t.level === 'warning').length,
-  });
-});
-
-function buildTasks() {
+async function buildTasks() {
   const tasks = [];
 
-  workers.list().forEach((w) => {
+  const allWorkers = await workers.list();
+  for (const w of allWorkers) {
     const urgency = getUrgency(getDaysUntil(w.visaExpiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       tasks.push({
@@ -36,13 +21,14 @@ function buildTasks() {
         link: { tab: 'workers', id: w.id },
       });
     }
-  });
+  }
 
-  applicationCases.list().forEach((c) => {
-    if (!c.dueDate || c.status === '認定済み') return;
+  const allCases = await applicationCases.list();
+  for (const c of allCases) {
+    if (!c.dueDate || c.status === '認定済み') continue;
     const urgency = getUrgency(getDaysUntil(c.dueDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
-      const worker = workers.get(c.workerId);
+      const worker = await workers.get(c.workerId);
       tasks.push({
         id: `case-due-${c.id}`,
         category: '認定申請 提出期限',
@@ -53,14 +39,15 @@ function buildTasks() {
         link: { tab: 'applications', id: c.id },
       });
     }
-  });
+  }
 
-  visitsAudits.list().forEach((v) => {
-    if (v.completedDate) return;
+  const allVisits = await visitsAudits.list();
+  for (const v of allVisits) {
+    if (v.completedDate) continue;
     const urgency = getUrgency(getDaysUntil(v.scheduledDate), 14);
     if (urgency.level === 'expired' || urgency.level === 'warning') {
-      const worker = v.workerId ? workers.get(v.workerId) : null;
-      const company = v.hostCompanyId ? hostCompanies.get(v.hostCompanyId) : null;
+      const worker = v.workerId ? await workers.get(v.workerId) : null;
+      const company = v.hostCompanyId ? await hostCompanies.get(v.hostCompanyId) : null;
       tasks.push({
         id: `visit-${v.id}`,
         category: v.type,
@@ -71,14 +58,30 @@ function buildTasks() {
         link: { tab: 'visits', id: v.id },
       });
     }
-  });
+  }
 
   tasks.sort((a, b) => (a.days ?? 999999) - (b.days ?? 999999));
   return tasks;
 }
 
-router.get('/tasks', (req, res) => {
-  res.json(buildTasks());
+router.get('/stats', async (req, res) => {
+  const allWorkers = await workers.list();
+  const allCompanies = await hostCompanies.list();
+  const allCases = await applicationCases.list();
+
+  const urgentTasks = (await buildTasks()).filter((t) => t.level === 'expired' || t.level === 'warning');
+
+  res.json({
+    activeWorkers: allWorkers.length,
+    hostCompanies: allCompanies.filter((c) => c.status === 'active').length,
+    processingCases: allCases.filter((c) => c.status !== '認定済み').length,
+    urgentCount: urgentTasks.filter((t) => t.level === 'expired').length,
+    warningCount: urgentTasks.filter((t) => t.level === 'warning').length,
+  });
+});
+
+router.get('/tasks', async (req, res) => {
+  res.json(await buildTasks());
 });
 
 module.exports = router;

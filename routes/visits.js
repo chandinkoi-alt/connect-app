@@ -6,9 +6,9 @@ const router = express.Router();
 
 const VISIT_TYPES = ['訪問指導', '監査'];
 
-function withJoins(item) {
-  const worker = item.workerId ? workers.get(item.workerId) : null;
-  const company = item.hostCompanyId ? hostCompanies.get(item.hostCompanyId) : null;
+async function withJoins(item) {
+  const worker = item.workerId ? await workers.get(item.workerId) : null;
+  const company = item.hostCompanyId ? await hostCompanies.get(item.hostCompanyId) : null;
   return {
     ...item,
     workerName: worker ? worker.name : '',
@@ -31,9 +31,9 @@ function buildRecord(body, existing = {}) {
 
 router.get('/types', (req, res) => res.json(VISIT_TYPES));
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { workerId, hostCompanyId, type } = req.query;
-  let result = visitsAudits.list().map(withJoins);
+  let result = await Promise.all((await visitsAudits.list()).map(withJoins));
   if (workerId) result = result.filter((v) => v.workerId === Number(workerId));
   if (hostCompanyId) result = result.filter((v) => v.hostCompanyId === Number(hostCompanyId));
   if (type) result = result.filter((v) => v.type === type);
@@ -49,27 +49,27 @@ router.get('/', (req, res) => {
   res.json(result);
 });
 
-router.get('/:id', (req, res) => {
-  const item = visitsAudits.get(Number(req.params.id));
+router.get('/:id', async (req, res) => {
+  const item = await visitsAudits.get(Number(req.params.id));
   if (!item) return res.status(404).json({ error: '記録が見つかりません。' });
-  res.json(withJoins(item));
+  res.json(await withJoins(item));
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!req.body.scheduledDate) return res.status(400).json({ errors: ['予定日は必須です。'] });
   if (!VISIT_TYPES.includes(req.body.type)) return res.status(400).json({ errors: ['種別を正しく選択してください。'] });
-  res.status(201).json(withJoins(visitsAudits.insert(buildRecord(req.body))));
+  res.status(201).json(await withJoins(await visitsAudits.insert(buildRecord(req.body))));
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = visitsAudits.get(id);
+  const existing = await visitsAudits.get(id);
   if (!existing) return res.status(404).json({ error: '記録が見つかりません。' });
-  res.json(withJoins(visitsAudits.update(id, buildRecord(req.body, existing))));
+  res.json(await withJoins(await visitsAudits.update(id, buildRecord(req.body, existing))));
 });
 
-router.delete('/:id', (req, res) => {
-  const deleted = visitsAudits.remove(Number(req.params.id));
+router.delete('/:id', async (req, res) => {
+  const deleted = await visitsAudits.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '記録が見つかりません。' });
   res.json({ ok: true });
 });

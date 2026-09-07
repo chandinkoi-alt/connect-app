@@ -1,13 +1,13 @@
 const path = require('path');
-const Database = require('better-sqlite3');
+const { createClient } = require('@libsql/client');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data.sqlite3');
-const db = new Database(DB_PATH);
+// TURSO_DATABASE_URL/TURSO_AUTH_TOKEN 未設定時はローカルファイルにフォールバック（開発用）
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, 'data.sqlite3')}`,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-db.exec(`
+const SCHEMA = `
   CREATE TABLE IF NOT EXISTS sending_organizations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -98,40 +98,47 @@ db.exec(`
     result TEXT,
     notes TEXT
   );
-`);
+`;
+
+const ready = client.executeMultiple(SCHEMA);
 
 function makeRepo(table, columns) {
-  const cols = columns;
-  const selectAll = db.prepare(`SELECT * FROM ${table} ORDER BY id DESC`);
-  const selectOne = db.prepare(`SELECT * FROM ${table} WHERE id = ?`);
-  const insertStmt = db.prepare(
-    `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map((c) => `@${c}`).join(', ')})`
-  );
-  const updateStmt = db.prepare(
-    `UPDATE ${table} SET ${cols.map((c) => `${c} = @${c}`).join(', ')} WHERE id = @id`
-  );
-  const deleteStmt = db.prepare(`DELETE FROM ${table} WHERE id = ?`);
+  const repo = {
+    columns,
 
-  return {
-    columns: cols,
-    list() {
-      return selectAll.all();
+    async list() {
+      const rs = await client.execute(`SELECT * FROM ${table} ORDER BY id DESC`);
+      return rs.rows.map((row) => ({ ...row }));
     },
-    get(id) {
-      return selectOne.get(id);
+
+    async get(id) {
+      const rs = await client.execute({ sql: `SELECT * FROM ${table} WHERE id = ?`, args: [id] });
+      return rs.rows.length ? { ...rs.rows[0] } : undefined;
     },
-    insert(record) {
-      const info = insertStmt.run(record);
-      return selectOne.get(info.lastInsertRowid);
+
+    async insert(record) {
+      const placeholders = columns.map(() => '?').join(', ');
+      const args = columns.map((c) => record[c] ?? null);
+      const rs = await client.execute({
+        sql: `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})`,
+        args,
+      });
+      return repo.get(Number(rs.lastInsertRowid));
     },
-    update(id, record) {
-      const info = updateStmt.run({ ...record, id });
-      return info.changes > 0 ? selectOne.get(id) : null;
+
+    async update(id, record) {
+      const setClause = columns.map((c) => `${c} = ?`).join(', ');
+      const args = [...columns.map((c) => record[c] ?? null), id];
+      const rs = await client.execute({ sql: `UPDATE ${table} SET ${setClause} WHERE id = ?`, args });
+      return rs.rowsAffected > 0 ? repo.get(id) : null;
     },
-    remove(id) {
-      return deleteStmt.run(id).changes > 0;
+
+    async remove(id) {
+      const rs = await client.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] });
+      return rs.rowsAffected > 0;
     },
   };
+  return repo;
 }
 
 const sendingOrgs = makeRepo('sending_organizations', [
@@ -164,7 +171,8 @@ const visitsAudits = makeRepo('visits_audits', [
 ]);
 
 module.exports = {
-  db,
+  client,
+  ready,
   sendingOrgs,
   hostCompanies,
   candidates,

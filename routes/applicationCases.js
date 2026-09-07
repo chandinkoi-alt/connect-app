@@ -6,9 +6,9 @@ const router = express.Router();
 
 const STATUSES = ['書類準備中', '提出済み', '追加書類対応中', '認定済み'];
 
-function withJoins(appCase) {
-  const worker = appCase.workerId ? workers.get(appCase.workerId) : null;
-  const company = worker && worker.hostCompanyId ? hostCompanies.get(worker.hostCompanyId) : null;
+async function withJoins(appCase) {
+  const worker = appCase.workerId ? await workers.get(appCase.workerId) : null;
+  const company = worker && worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
   return {
     ...appCase,
     checklist: JSON.parse(appCase.checklist || '[]'),
@@ -35,53 +35,56 @@ function buildRecord(body, existing = {}) {
 
 router.get('/statuses', (req, res) => res.json(STATUSES));
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { workerId, companyId, status } = req.query;
-  let result = applicationCases.list().map(withJoins);
+  let result = await Promise.all((await applicationCases.list()).map(withJoins));
   if (workerId) result = result.filter((c) => c.workerId === Number(workerId));
   if (status) result = result.filter((c) => c.status === status);
   if (companyId) {
-    result = result.filter((c) => {
-      const worker = workers.get(c.workerId);
-      return worker && worker.hostCompanyId === Number(companyId);
-    });
+    const checks = await Promise.all(
+      result.map(async (c) => {
+        const worker = await workers.get(c.workerId);
+        return worker && worker.hostCompanyId === Number(companyId);
+      })
+    );
+    result = result.filter((_, i) => checks[i]);
   }
   res.json(result);
 });
 
-router.get('/:id', (req, res) => {
-  const item = applicationCases.get(Number(req.params.id));
+router.get('/:id', async (req, res) => {
+  const item = await applicationCases.get(Number(req.params.id));
   if (!item) return res.status(404).json({ error: '申請案件が見つかりません。' });
-  res.json(withJoins(item));
+  res.json(await withJoins(item));
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!req.body.workerId) return res.status(400).json({ errors: ['対象者を選択してください。'] });
   if (!req.body.statusType) return res.status(400).json({ errors: ['制度区分を選択してください。'] });
-  res.status(201).json(withJoins(applicationCases.insert(buildRecord(req.body))));
+  res.status(201).json(await withJoins(await applicationCases.insert(buildRecord(req.body))));
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = applicationCases.get(id);
+  const existing = await applicationCases.get(id);
   if (!existing) return res.status(404).json({ error: '申請案件が見つかりません。' });
-  res.json(withJoins(applicationCases.update(id, buildRecord(req.body, existing))));
+  res.json(await withJoins(await applicationCases.update(id, buildRecord(req.body, existing))));
 });
 
 // チェックリスト項目のON/OFF切替
-router.put('/:id/checklist', (req, res) => {
+router.put('/:id/checklist', async (req, res) => {
   const id = Number(req.params.id);
-  const existing = applicationCases.get(id);
+  const existing = await applicationCases.get(id);
   if (!existing) return res.status(404).json({ error: '申請案件が見つかりません。' });
   const { index, done } = req.body;
   const checklist = JSON.parse(existing.checklist || '[]');
   if (!checklist[index]) return res.status(400).json({ error: '不正な項目です。' });
   checklist[index].done = !!done;
-  res.json(withJoins(applicationCases.update(id, { ...existing, checklist: JSON.stringify(checklist) })));
+  res.json(await withJoins(await applicationCases.update(id, { ...existing, checklist: JSON.stringify(checklist) })));
 });
 
-router.delete('/:id', (req, res) => {
-  const deleted = applicationCases.remove(Number(req.params.id));
+router.delete('/:id', async (req, res) => {
+  const deleted = await applicationCases.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '申請案件が見つかりません。' });
   res.json({ ok: true });
 });
