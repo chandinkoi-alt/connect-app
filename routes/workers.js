@@ -1,12 +1,15 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const { workers, hostCompanies, sendingOrgs, applicationCases, visitsAudits } = require('../db');
+const { workers, hostCompanies, sendingOrgs, applicationCases, visitsAudits, workerRegistrations } = require('../db');
 const { getDaysUntil, getUrgency } = require('../lib/dates');
+const { SPECIAL_HEALTH_CHECK_TYPES, buildSpecialHealthChecks } = require('../lib/healthChecks');
 
 const router = express.Router();
 
 const VISA_TYPES = ['技能実習1号', '技能実習2号', '技能実習3号', '育成就労', '特定技能1号', '特定技能2号'];
 const STATUS_TYPES = ['技能実習', '育成就労', '特定技能'];
+const STAGE_OPTIONS = ['準備中', '就労中', '一時帰国中', '帰国済み'];
+const TOKUTEI_TRAINING_STATUSES = ['未受講', '受講中', '受講済み'];
 
 async function withJoins(worker) {
   const company = worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
@@ -16,10 +19,11 @@ async function withJoins(worker) {
     companyName: company ? company.name : '',
     sendingOrgName: sendingOrg ? sendingOrg.name : '',
     visaStatus: getUrgency(getDaysUntil(worker.visaExpiryDate)),
+    specialHealthChecks: JSON.parse(worker.specialHealthChecks || '[]'),
   };
 }
 
-function buildRecord(body) {
+function buildRecord(body, existing = {}) {
   return {
     name: (body.name || '').trim(),
     nameKana: (body.nameKana || '').trim(),
@@ -27,28 +31,41 @@ function buildRecord(body) {
     gender: body.gender || '',
     dob: body.dob || '',
     passportNumber: (body.passportNumber || '').trim(),
+    passportExpiryDate: body.passportExpiryDate || '',
     residenceCardNumber: (body.residenceCardNumber || '').trim(),
     visaType: body.visaType || '',
     visaExpiryDate: body.visaExpiryDate || '',
     entryDate: body.entryDate || '',
+    trainingStartDate: body.trainingStartDate || '',
     hostCompanyId: body.hostCompanyId ? Number(body.hostCompanyId) : null,
     sendingOrgId: body.sendingOrgId ? Number(body.sendingOrgId) : null,
     jobCategory: (body.jobCategory || '').trim(),
     contractStartDate: body.contractStartDate || '',
     contractEndDate: body.contractEndDate || '',
     phone: (body.phone || '').trim(),
+    homeCountryAddress: (body.homeCountryAddress || '').trim(),
     notes: (body.notes || '').trim(),
     statusType: body.statusType || STATUS_TYPES[0],
-    currentStage: (body.currentStage || '').trim(),
+    currentStage: body.currentStage || '',
     baseSalary: body.baseSalary ? Number(body.baseSalary) : null,
     workingHours: (body.workingHours || '').trim(),
+    workStartTime: (body.workStartTime || '').trim(),
+    workEndTime: (body.workEndTime || '').trim(),
+    holidays: (body.holidays || '').trim(),
+    payDate: (body.payDate || '').trim(),
     overtimeRate: (body.overtimeRate || '').trim(),
     allowances: (body.allowances || '').trim(),
     deductions: (body.deductions || '').trim(),
+    educationWorkHistory: (body.educationWorkHistory || '').trim(),
     dormitoryInfo: (body.dormitoryInfo || '').trim(),
     healthCheckDate: body.healthCheckDate || '',
+    specialHealthChecks: body.specialHealthChecks
+      ? JSON.stringify(body.specialHealthChecks)
+      : existing.specialHealthChecks || JSON.stringify(buildSpecialHealthChecks()),
     consultationContact: (body.consultationContact || '').trim(),
     insuranceStatus: (body.insuranceStatus || '').trim(),
+    tokuteiTrainingStatus: body.tokuteiTrainingStatus || '',
+    tokuteiTrainingDate: body.tokuteiTrainingDate || '',
   };
 }
 
@@ -63,6 +80,9 @@ function validate(body) {
 
 router.get('/visa-types', (req, res) => res.json(VISA_TYPES));
 router.get('/status-types', (req, res) => res.json(STATUS_TYPES));
+router.get('/stage-options', (req, res) => res.json(STAGE_OPTIONS));
+router.get('/tokutei-training-statuses', (req, res) => res.json(TOKUTEI_TRAINING_STATUSES));
+router.get('/special-health-check-types', (req, res) => res.json(SPECIAL_HEALTH_CHECK_TYPES));
 
 router.get('/', async (req, res) => {
   const { statusType, hostCompanyId, search } = req.query;
@@ -91,7 +111,7 @@ router.get('/', async (req, res) => {
   res.json(result);
 });
 
-// 人材360: 対象者の詳細プロフィール + 関連する認定申請・面談監査記録
+// 人材360: 対象者の詳細プロフィール + 関連する認定申請・面談監査記録・登録保険情報
 router.get('/:id/profile360', async (req, res) => {
   const id = Number(req.params.id);
   const worker = await workers.get(id);
@@ -99,11 +119,13 @@ router.get('/:id/profile360', async (req, res) => {
 
   const cases = (await applicationCases.list()).filter((c) => c.workerId === id);
   const visits = (await visitsAudits.list()).filter((v) => v.workerId === id);
+  const registrations = await workerRegistrations.listByWorker(id);
 
   res.json({
     worker: await withJoins(worker),
     applicationCases: cases.map((c) => ({ ...c, checklist: JSON.parse(c.checklist || '[]') })),
     visits,
+    registrations,
   });
 });
 
@@ -121,15 +143,70 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  if (!(await workers.get(id))) return res.status(404).json({ error: '対象者が見つかりません。' });
+  const existing = await workers.get(id);
+  if (!existing) return res.status(404).json({ error: '対象者が見つかりません。' });
   const errors = validate(req.body);
   if (errors.length) return res.status(400).json({ errors });
-  res.json(await withJoins(await workers.update(id, buildRecord(req.body))));
+  res.json(await withJoins(await workers.update(id, buildRecord(req.body, existing))));
 });
 
 router.delete('/:id', async (req, res) => {
   const deleted = await workers.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '対象者が見つかりません。' });
+  res.json({ ok: true });
+});
+
+// 登録・保険（対象者単位）
+router.get('/:id/registrations', async (req, res) => {
+  const workerId = Number(req.params.id);
+  if (!(await workers.get(workerId))) return res.status(404).json({ error: '対象者が見つかりません。' });
+  res.json(await workerRegistrations.listByWorker(workerId));
+});
+
+router.post('/:id/registrations', async (req, res) => {
+  const workerId = Number(req.params.id);
+  if (!(await workers.get(workerId))) return res.status(404).json({ error: '対象者が見つかりません。' });
+  const label = (req.body.label || '').trim();
+  if (!label) return res.status(400).json({ errors: ['項目名は必須です。'] });
+  const record = await workerRegistrations.insert({
+    workerId,
+    label,
+    registrationNumber: (req.body.registrationNumber || '').trim(),
+    issueDate: req.body.issueDate || '',
+    expiryDate: req.body.expiryDate || '',
+    notes: (req.body.notes || '').trim(),
+  });
+  res.status(201).json(record);
+});
+
+router.put('/:id/registrations/:regId', async (req, res) => {
+  const workerId = Number(req.params.id);
+  const regId = Number(req.params.regId);
+  const existing = await workerRegistrations.get(regId);
+  if (!existing || existing.workerId !== workerId) {
+    return res.status(404).json({ error: '登録項目が見つかりません。' });
+  }
+  const label = (req.body.label ?? existing.label).toString().trim();
+  if (!label) return res.status(400).json({ errors: ['項目名は必須です。'] });
+  const updated = await workerRegistrations.update(regId, {
+    workerId,
+    label,
+    registrationNumber: (req.body.registrationNumber ?? existing.registrationNumber ?? '').toString().trim(),
+    issueDate: req.body.issueDate ?? existing.issueDate ?? '',
+    expiryDate: req.body.expiryDate ?? existing.expiryDate ?? '',
+    notes: (req.body.notes ?? existing.notes ?? '').toString().trim(),
+  });
+  res.json(updated);
+});
+
+router.delete('/:id/registrations/:regId', async (req, res) => {
+  const workerId = Number(req.params.id);
+  const regId = Number(req.params.regId);
+  const existing = await workerRegistrations.get(regId);
+  if (!existing || existing.workerId !== workerId) {
+    return res.status(404).json({ error: '登録項目が見つかりません。' });
+  }
+  await workerRegistrations.remove(regId);
   res.json({ ok: true });
 });
 
@@ -146,6 +223,7 @@ router.get('/export/roster', async (req, res) => {
     { header: '受入企業', key: 'companyName', width: 22 },
     { header: '送出機関', key: 'sendingOrgName', width: 20 },
     { header: '職種・作業', key: 'jobCategory', width: 22 },
+    { header: 'ステータス', key: 'currentStage', width: 12 },
     { header: '電話番号', key: 'phone', width: 16 },
     { header: '備考', key: 'notes', width: 24 },
   ];
@@ -166,8 +244,8 @@ router.get('/:id/document', async (req, res) => {
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('個人票');
-  sheet.getColumn(1).width = 20;
-  sheet.getColumn(2).width = 30;
+  sheet.getColumn(1).width = 22;
+  sheet.getColumn(2).width = 32;
 
   const title = `${joined.statusType} 個人票`;
   sheet.mergeCells('A1:B1');
@@ -181,18 +259,26 @@ router.get('/:id/document', async (req, res) => {
     ['性別', joined.gender],
     ['生年月日', joined.dob],
     ['旅券番号', joined.passportNumber],
+    ['旅券有効期限', joined.passportExpiryDate],
     ['在留カード番号', joined.residenceCardNumber],
     ['制度区分', joined.statusType],
     ['在留資格', joined.visaType],
     ['在留期限', joined.visaExpiryDate],
     ['入国日', joined.entryDate],
+    ['実習・就労開始日', joined.trainingStartDate],
+    ['ステータス', joined.currentStage],
     ['受入企業', joined.companyName],
     ['送出機関', joined.sendingOrgName],
     ['職種・作業', joined.jobCategory],
+    ['本国住所', joined.homeCountryAddress],
+    ['学歴・職歴', joined.educationWorkHistory],
     ['雇用契約開始日', joined.contractStartDate],
     ['雇用契約終了日', joined.contractEndDate],
     ['基本賃金', joined.baseSalary],
-    ['労働時間', joined.workingHours],
+    ['始業時刻', joined.workStartTime],
+    ['終業時刻', joined.workEndTime],
+    ['休日', joined.holidays],
+    ['給料支払日', joined.payDate],
     ['宿舎情報', joined.dormitoryInfo],
     ['電話番号', joined.phone],
     ['備考', joined.notes],

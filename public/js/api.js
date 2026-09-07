@@ -63,3 +63,16 @@ function debounce(fn, wait) {
     timer = setTimeout(() => fn(...args), wait);
   };
 }
+
+function getExpiryUrgency(dateStr, warningDays = 90) {
+  if (!dateStr) return { label: '未設定', level: 'unknown', days: null };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  if (Number.isNaN(target.getTime())) return { label: '未設定', level: 'unknown', days: null };
+  target.setHours(0, 0, 0, 0);
+  const days = Math.round((target - today) / (1000 * 60 * 60 * 24));
+  if (days < 0) return { label: '期限切れ', level: 'expired', days };
+  if (days <= warningDays) return { label: '期限間近', level: 'warning', days };
+  return { label: '正常', level: 'ok', days };
+}
