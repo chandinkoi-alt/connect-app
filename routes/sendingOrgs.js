@@ -1,6 +1,6 @@
 const express = require('express');
 const { sendingOrgs, workers, hostCompanies } = require('../db');
-const { getDaysUntil, getUrgency } = require('../lib/dates');
+const { getDaysUntil, getUrgency, getWorkerVisaUrgency } = require('../lib/dates');
 
 const router = express.Router();
 
@@ -73,7 +73,7 @@ router.get('/:id/workers', async (req, res) => {
       name: w.name,
       currentStage: w.currentStage,
       visaExpiryDate: w.visaExpiryDate,
-      visaStatus: getUrgency(getDaysUntil(w.visaExpiryDate)),
+      visaStatus: getWorkerVisaUrgency(w),
       companyName: w.hostCompanyId && companyById.has(w.hostCompanyId) ? companyById.get(w.hostCompanyId).name : '',
     }))
     .sort((a, b) => a.name.localeCompare(b.name));

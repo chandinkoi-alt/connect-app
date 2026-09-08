@@ -1,7 +1,29 @@
 const express = require('express');
 const { hostCompanies, companyRegistrations } = require('../db');
+const { getDaysUntil, getUrgency } = require('../lib/dates');
+const { getEffectiveExpiryDate } = require('../lib/companyRegistrationExpiry');
 
 const router = express.Router();
+
+// 一覧画面でひと目で確認できるようにする重要期限（36協定・責任者講習・建設業許可）。
+// ラベルは lib/excelImport.js の取り込み時と揃えている。
+const KEY_DEADLINE_LABELS = {
+  agreement36: '36協定',
+  managerTraining: '責任者講習受講日',
+  constructionLicense: '建設業許可',
+};
+
+function buildKeyDeadlines(regsForCompany) {
+  const regByLabel = new Map(regsForCompany.map((r) => [r.label, r]));
+  const result = {};
+  for (const [key, label] of Object.entries(KEY_DEADLINE_LABELS)) {
+    const reg = regByLabel.get(label);
+    const expiryDate = reg ? getEffectiveExpiryDate(reg) : '';
+    const urgency = getUrgency(getDaysUntil(expiryDate));
+    result[key] = { name: label, expiryDate, urgencyLabel: urgency.label, level: urgency.level, days: urgency.days };
+  }
+  return result;
+}
 
 const LEAD_STAGES = ['新規リード', '商談中', '条件交渉', '契約締結待ち', '契約済み'];
 const YES_NO_UNKNOWN = ['適合', '不適合', '未確認'];
@@ -43,7 +65,13 @@ router.get('/dormitory-options', (req, res) => res.json({ roomSizeOptions: YES_N
 
 router.get('/', async (req, res) => {
   const { status } = req.query;
-  let result = await hostCompanies.list();
+  const [companies, allRegs] = await Promise.all([hostCompanies.list(), companyRegistrations.list()]);
+  const regsByCompanyId = new Map();
+  for (const r of allRegs) {
+    if (!regsByCompanyId.has(r.hostCompanyId)) regsByCompanyId.set(r.hostCompanyId, []);
+    regsByCompanyId.get(r.hostCompanyId).push(r);
+  }
+  let result = companies.map((c) => ({ ...c, keyDeadlines: buildKeyDeadlines(regsByCompanyId.get(c.id) || []) }));
   if (status) result = result.filter((c) => c.status === status);
   res.json(result);
 });

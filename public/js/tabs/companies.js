@@ -1,6 +1,24 @@
 const TabCompanies = {
   dormitoryOptions: { roomSizeOptions: [], lockOptions: [] },
 
+  // 36協定・責任者講習・建設業許可の期限をひと目で確認できるよう、一覧の各行に
+  // 短いバッジを縦に並べて表示する（未登録の企業は「未登録」表示のみ）。
+  renderKeyDeadlines(keyDeadlines) {
+    if (!keyDeadlines) return '－';
+    const items = [
+      [keyDeadlines.agreement36, '36協定'],
+      [keyDeadlines.managerTraining, '講習'],
+      [keyDeadlines.constructionLicense, '建設業'],
+    ];
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
+    return `<div class="deadline-stack">${items
+      .map(([d, short]) => {
+        if (!d || !d.expiryDate) return `<span class="badge badge-unknown badge-tiny">${short} 未登録</span>`;
+        return `<span class="badge ${badgeClass[d.level]} badge-tiny" title="${escapeHtml(d.name)}">${short} ${escapeHtml(d.expiryDate)}</span>`;
+      })
+      .join('')}</div>`;
+  },
+
   async render(container) {
     container.innerHTML = `
       <section class="card">
@@ -14,9 +32,9 @@ const TabCompanies = {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>No.</th><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th>状態</th><th></th></tr>
+              <tr><th>No.</th><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th>重要期限</th><th>状態</th><th></th></tr>
             </thead>
-            <tbody id="companyTableBody"><tr><td colspan="8">読み込み中...</td></tr></tbody>
+            <tbody id="companyTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -52,7 +70,7 @@ const TabCompanies = {
     const tbody = document.getElementById('companyTableBody');
     if (!tbody) return;
     if (!companies.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">受入企業が登録されていません。</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">受入企業が登録されていません。</td></tr>';
       return;
     }
     tbody.innerHTML = companies
@@ -65,6 +83,7 @@ const TabCompanies = {
         <td class="cell-wrap">${escapeHtml(c.address)}</td>
         <td>${escapeHtml(c.contactPerson)}</td>
         <td>${escapeHtml(c.phone)}</td>
+        <td>${this.renderKeyDeadlines(c.keyDeadlines)}</td>
         <td><span class="badge ${c.status === 'withdrawn' ? 'badge-muted' : 'badge-ok'}">${c.status === 'withdrawn' ? '退会' : '受入中'}</span></td>
         <td class="row-actions">
           <button class="link-btn link-edit" data-id="${c.id}" data-action="edit">編集</button>

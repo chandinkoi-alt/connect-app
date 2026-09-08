@@ -68,7 +68,7 @@ const TabSendingOrgs = {
       tbody.innerHTML = '<tr class="empty-row"><td colspan="8">送出機関が登録されていません。</td></tr>';
       return;
     }
-    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown', muted: 'badge-muted' };
     tbody.innerHTML = orgs
       .map((o) => {
         const mou = o.mouStatus;
@@ -121,7 +121,7 @@ const TabSendingOrgs = {
 
   async openProfile(org) {
     const orgWorkers = await api.get(`/api/sending-orgs/${org.id}/workers`);
-    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown', muted: 'badge-muted' };
 
     Modal.open(
       `${org.name}（送出機関）`,

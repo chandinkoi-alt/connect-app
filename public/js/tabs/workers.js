@@ -89,11 +89,12 @@ const TabWorkers = {
       return aInactive === bInactive ? 0 : aInactive ? 1 : -1;
     });
 
-    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown', muted: 'badge-muted' };
     tbody.innerHTML = workers
       .map((w) => {
         const s = w.visaStatus;
-        const daysLabel = s.days === null ? '' : s.days < 0 ? `（${Math.abs(s.days)}日超過）` : `（残り${s.days}日）`;
+        const daysLabel =
+          s.days === null || s.level === 'muted' ? '' : s.days < 0 ? `（${Math.abs(s.days)}日超過）` : `（残り${s.days}日）`;
         const isInactive = INACTIVE_STAGES.includes(w.currentStage);
         const stageBadgeClass = w.currentStage === '失踪' ? 'badge-expired' : isInactive ? 'badge-muted' : 'badge-ok';
         return `
@@ -249,7 +250,7 @@ const TabWorkers = {
 
   renderRegistrations(regs) {
     if (!regs.length) return '<div class="empty-hint">登録項目がありません。</div>';
-    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown', muted: 'badge-muted' };
     return `
       <div class="table-wrap">
         <table>

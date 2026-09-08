@@ -8,12 +8,10 @@ const {
   workerRegistrations,
   sendingOrgs,
 } = require('../db');
-const { getDaysUntil, getUrgency } = require('../lib/dates');
+const { getDaysUntil, getUrgency, getWorkerVisaUrgency } = require('../lib/dates');
+const { getEffectiveExpiryDate } = require('../lib/companyRegistrationExpiry');
 
 const router = express.Router();
-
-// 既に帰国済み・失踪の対象者は在留期限が切れていても対応不要のため対象外とする
-const INACTIVE_STAGES = ['帰国済み', '失踪'];
 
 async function buildTasks() {
   const tasks = [];
@@ -33,9 +31,10 @@ async function buildTasks() {
   const workerById = new Map(allWorkers.map((w) => [w.id, w]));
   const companyById = new Map(allCompanies.map((c) => [c.id, c]));
 
+  // 在留期限の警告は就労中の対象者のみ（準備中・一時帰国中・帰国済み・失踪は対応不要）。
+  // 4ヶ月を切ったら警告、3ヶ月を切ったら危険（lib/dates.js の getWorkerVisaUrgency を参照）。
   for (const w of allWorkers) {
-    if (INACTIVE_STAGES.includes(w.currentStage)) continue;
-    const urgency = getUrgency(getDaysUntil(w.visaExpiryDate));
+    const urgency = getWorkerVisaUrgency(w);
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       tasks.push({
         id: `worker-visa-${w.id}`,
@@ -85,15 +84,16 @@ async function buildTasks() {
   }
 
   for (const r of allCompanyRegs) {
-    if (!r.expiryDate) continue;
-    const urgency = getUrgency(getDaysUntil(r.expiryDate));
+    const expiryDate = getEffectiveExpiryDate(r);
+    if (!expiryDate) continue;
+    const urgency = getUrgency(getDaysUntil(expiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       const company = companyById.get(r.hostCompanyId);
       tasks.push({
         id: `company-reg-${r.id}`,
         category: '企業 登録・許認可',
         title: `${company ? company.name : '企業'} の${r.label}`,
-        dueDate: r.expiryDate,
+        dueDate: expiryDate,
         level: urgency.level,
         days: urgency.days,
         link: { tab: 'companies', id: r.hostCompanyId },
