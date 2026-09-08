@@ -1,8 +1,19 @@
 const express = require('express');
-const { workers, hostCompanies, applicationCases, visitsAudits, companyRegistrations, workerRegistrations } = require('../db');
+const {
+  workers,
+  hostCompanies,
+  applicationCases,
+  visitsAudits,
+  companyRegistrations,
+  workerRegistrations,
+  sendingOrgs,
+} = require('../db');
 const { getDaysUntil, getUrgency } = require('../lib/dates');
 
 const router = express.Router();
+
+// 既に帰国済み・失踪の対象者は在留期限が切れていても対応不要のため対象外とする
+const INACTIVE_STAGES = ['帰国済み', '失踪'];
 
 async function buildTasks() {
   const tasks = [];
@@ -10,18 +21,20 @@ async function buildTasks() {
   // データ量が多くなると 1件ずつ .get() で問い合わせるのは非常に遅くなる
   // （Tursoはリモート通信のため1回ごとに数十〜数百msかかる）。
   // 必要なテーブルを最初に一括取得し、Mapで引けるようにしておく。
-  const [allWorkers, allCompanies, allCases, allVisits, allCompanyRegs, allWorkerRegs] = await Promise.all([
+  const [allWorkers, allCompanies, allCases, allVisits, allCompanyRegs, allWorkerRegs, allSendingOrgs] = await Promise.all([
     workers.list(),
     hostCompanies.list(),
     applicationCases.list(),
     visitsAudits.list(),
     companyRegistrations.list(),
     workerRegistrations.list(),
+    sendingOrgs.list(),
   ]);
   const workerById = new Map(allWorkers.map((w) => [w.id, w]));
   const companyById = new Map(allCompanies.map((c) => [c.id, c]));
 
   for (const w of allWorkers) {
+    if (INACTIVE_STAGES.includes(w.currentStage)) continue;
     const urgency = getUrgency(getDaysUntil(w.visaExpiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       tasks.push({
@@ -101,6 +114,22 @@ async function buildTasks() {
         level: urgency.level,
         days: urgency.days,
         link: { tab: 'workers', id: r.workerId },
+      });
+    }
+  }
+
+  for (const o of allSendingOrgs) {
+    if (!o.mouExpiryDate) continue;
+    const urgency = getUrgency(getDaysUntil(o.mouExpiryDate));
+    if (urgency.level === 'expired' || urgency.level === 'warning') {
+      tasks.push({
+        id: `sendingorg-mou-${o.id}`,
+        category: '送出機関 覚書(MOU)',
+        title: `${o.name} の覚書有効期限`,
+        dueDate: o.mouExpiryDate,
+        level: urgency.level,
+        days: urgency.days,
+        link: { tab: 'sendingOrgs', id: o.id },
       });
     }
   }

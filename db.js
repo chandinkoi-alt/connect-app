@@ -16,11 +16,17 @@ const SCHEMA = `
     contactPerson TEXT,
     contactPhone TEXT,
     contactEmail TEXT,
+    address TEXT,
+    representativeName TEXT,
+    authorizationNumber TEXT,
+    mouSignedDate TEXT,
+    mouExpiryDate TEXT,
     notes TEXT
   );
 
   CREATE TABLE IF NOT EXISTS host_companies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    companyNo INTEGER,
     name TEXT NOT NULL,
     industry TEXT,
     address TEXT,
@@ -66,6 +72,7 @@ const SCHEMA = `
 
   CREATE TABLE IF NOT EXISTS workers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    personalNo INTEGER,
     name TEXT NOT NULL,
     nameKana TEXT,
     nationality TEXT,
@@ -180,7 +187,12 @@ const SCHEMA = `
 // CREATE TABLE IF NOT EXISTS では追加されない列を ALTER TABLE で補完する。
 // NOT NULL 制約のある元からの列（name, visaType 等）は必ず存在するため対象外。
 const MIGRATION_COLUMNS = {
+  sending_organizations: [
+    ['address', 'TEXT'], ['representativeName', 'TEXT'], ['authorizationNumber', 'TEXT'],
+    ['mouSignedDate', 'TEXT'], ['mouExpiryDate', 'TEXT'],
+  ],
   host_companies: [
+    ['companyNo', 'INTEGER'],
     ['industry', 'TEXT'], ['address', 'TEXT'], ['contactPerson', 'TEXT'], ['phone', 'TEXT'],
     ['email', 'TEXT'], ['acceptanceStartDate', 'TEXT'], ['representativeName', 'TEXT'],
     ['regularEmployeeCount', 'INTEGER'], ['trainingManagerName', 'TEXT'], ['skillInstructor', 'TEXT'],
@@ -189,6 +201,7 @@ const MIGRATION_COLUMNS = {
     ['dormitoryInfo', 'TEXT'], ['notes', 'TEXT'], ['leadStage', 'TEXT'],
   ],
   workers: [
+    ['personalNo', 'INTEGER'],
     ['nameKana', 'TEXT'], ['nationality', 'TEXT'], ['gender', 'TEXT'], ['dob', 'TEXT'],
     ['passportNumber', 'TEXT'], ['passportExpiryDate', 'TEXT'], ['residenceCardNumber', 'TEXT'],
     ['entryDate', 'TEXT'], ['trainingStartDate', 'TEXT'], ['hostCompanyId', 'INTEGER'],
@@ -257,11 +270,12 @@ function makeRepo(table, columns) {
 }
 
 const sendingOrgs = makeRepo('sending_organizations', [
-  'name', 'country', 'licenseNumber', 'contactPerson', 'contactPhone', 'contactEmail', 'notes',
+  'name', 'country', 'licenseNumber', 'contactPerson', 'contactPhone', 'contactEmail',
+  'address', 'representativeName', 'authorizationNumber', 'mouSignedDate', 'mouExpiryDate', 'notes',
 ]);
 
 const hostCompanies = makeRepo('host_companies', [
-  'name', 'industry', 'address', 'contactPerson', 'phone', 'email', 'acceptanceStartDate',
+  'companyNo', 'name', 'industry', 'address', 'contactPerson', 'phone', 'email', 'acceptanceStartDate',
   'representativeName', 'regularEmployeeCount', 'trainingManagerName', 'skillInstructor', 'lifeInstructor',
   'dormitoryAddress', 'dormitoryMonthlyFee', 'dormitoryRoomSizeOk', 'dormitoryHasLock',
   'dormitoryHasValuablesStorage', 'dormitoryInfo', 'notes', 'status', 'leadStage',
@@ -284,7 +298,7 @@ const candidates = makeRepo('candidates', [
 ]);
 
 const workers = makeRepo('workers', [
-  'name', 'nameKana', 'nationality', 'gender', 'dob', 'passportNumber', 'passportExpiryDate',
+  'personalNo', 'name', 'nameKana', 'nationality', 'gender', 'dob', 'passportNumber', 'passportExpiryDate',
   'residenceCardNumber', 'visaType', 'visaExpiryDate', 'entryDate', 'trainingStartDate',
   'hostCompanyId', 'sendingOrgId', 'jobCategory', 'contractStartDate', 'contractEndDate', 'phone',
   'homeCountryAddress', 'notes', 'statusType', 'currentStage', 'baseSalary', 'workingHours',

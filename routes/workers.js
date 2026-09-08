@@ -8,7 +8,7 @@ const router = express.Router();
 
 const VISA_TYPES = ['技能実習1号', '技能実習2号', '技能実習3号', '育成就労', '特定技能1号', '特定技能2号'];
 const STATUS_TYPES = ['技能実習', '育成就労', '特定技能'];
-const STAGE_OPTIONS = ['準備中', '就労中', '一時帰国中', '帰国済み'];
+const STAGE_OPTIONS = ['準備中', '就労中', '一時帰国中', '帰国済み', '失踪'];
 const TOKUTEI_TRAINING_STATUSES = ['未受講', '受講中', '受講済み'];
 
 function joinWorker(worker, companyById, sendingOrgById) {
@@ -44,6 +44,7 @@ async function withJoinsAll(workerList) {
 
 function buildRecord(body, existing = {}) {
   return {
+    personalNo: existing.personalNo ?? null,
     name: (body.name || '').trim(),
     nameKana: (body.nameKana || '').trim(),
     nationality: (body.nationality || '').trim(),
