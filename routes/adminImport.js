@@ -21,6 +21,13 @@ function startJob(mode, buffer) {
 
   const worker = new Worker(path.join(__dirname, '../lib/importWorkerEntry.js'), {
     workerData: { buffer, mode },
+    // worker_threads のデフォルトのヒープ上限は、コンテナのメモリ制限から自動計算される際に
+    // 想定より小さくなることがある。ここで明示的に十分な上限を指定し、実際のメモリ使用量
+    // （数十MB程度）に対して不必要に低い上限で失敗しないようにする。
+    resourceLimits: {
+      maxOldGenerationSizeMb: 350,
+      maxYoungGenerationSizeMb: 64,
+    },
   });
 
   worker.on('message', (msg) => {
