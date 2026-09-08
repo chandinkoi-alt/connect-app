@@ -87,12 +87,12 @@ select {
 }
 
 .brand-logo {
-  height: 32px;
+  height: 48px;
   width: auto;
 }
 
 .brand-sub {
-  font-size: 11px;
+  font-size: 12.5px;
   color: #94a3b8;
   font-family: var(--font-jp);
 }
@@ -150,53 +150,53 @@ select {
 }
 
 .org-chip {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px;
+  padding: 10px 8px;
   border-radius: var(--radius-sm);
 }
 
-.org-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #1f2937;
-  color: #cbd5e1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  font-family: var(--font-jp);
-  flex-shrink: 0;
-}
-
 .org-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
   font-family: var(--font-jp);
   line-height: 1.4;
 }
 
 .org-role {
-  font-size: 10.5px;
+  font-size: 11px;
   color: #94a3b8;
   font-family: var(--font-jp);
+  margin-top: 2px;
+}
+
+.org-license-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
 
 .org-license {
-  font-size: 9.5px;
-  color: #64748b;
   font-family: var(--font-jp);
-  line-height: 1.6;
-  margin-top: 2px;
+  line-height: 1.5;
 }
 
 .org-license-label {
   display: block;
-  color: #475569;
+  font-size: 10px;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.org-license-value {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  letter-spacing: 0.02em;
+  margin-top: 1px;
 }
 
 .main-area {
@@ -234,11 +234,11 @@ select {
 }
 
 .topbar-user-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-muted);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
   font-family: var(--font-jp);
-  margin-right: 8px;
+  margin-right: 10px;
   white-space: nowrap;
 }
 
@@ -517,14 +517,20 @@ select:focus {
 }
 
 .table-wrap {
-  overflow-x: auto;
+  /* 列数の多い表（人材一覧・受入企業一覧など）は、横スクロールバーが表全体の下端
+     （行数が多いとページを最後までスクロールしないと出てこない）ではなく、常に
+     画面内で操作できるよう、表自体の高さを制限してその中でスクロールさせる。 */
+  max-height: clamp(320px, calc(100vh - 320px), 640px);
+  overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  /* sticky header requires separate borders — collapse breaks position:sticky on th in some browsers */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
@@ -537,6 +543,9 @@ td {
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 700;
