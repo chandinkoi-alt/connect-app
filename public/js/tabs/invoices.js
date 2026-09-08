@@ -192,7 +192,8 @@ const TabInvoices = {
 
       <div class="form-actions" style="margin-top:15px;">
         <button class="btn btn-primary" id="printInvoiceBtn">🖨 請求書を表示・印刷</button>
-        <button class="btn btn-success" id="exportInvoiceBtn">📥 Excel出力（簡易版）</button>
+        <button class="btn btn-success" id="pdfInvoiceBtn">📄 PDF出力</button>
+        <button class="btn btn-secondary" id="exportInvoiceBtn">📥 Excel出力（簡易版）</button>
       </div>
     `
     );
@@ -258,6 +259,10 @@ const TabInvoices = {
 
     document.getElementById('printInvoiceBtn').addEventListener('click', () => {
       window.open(`/invoice-print.html?id=${id}`, '_blank');
+    });
+
+    document.getElementById('pdfInvoiceBtn').addEventListener('click', () => {
+      window.open(`/api/invoices/${id}/pdf`, '_blank');
     });
   },
 

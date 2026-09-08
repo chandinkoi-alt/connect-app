@@ -1,7 +1,9 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 const { invoices, invoiceItems, hostCompanies, workers, billingRates } = require('../db');
 const { ISSUER } = require('../lib/invoiceSettings');
+const { generateInvoicePdf } = require('../lib/invoicePdf');
 
 const router = express.Router();
 
@@ -70,9 +72,11 @@ router.get('/', async (req, res) => {
   );
 });
 
-router.get('/:id', async (req, res) => {
-  const invoice = await invoices.get(Number(req.params.id));
-  if (!invoice) return res.status(404).json({ error: '請求書が見つかりません。' });
+// 印刷用ページ（invoice-print.html）・PDF出力の両方で使う、明細・企業・税集計・
+// 発行元情報まで含めた請求書の詳細データを組み立てる。
+async function buildInvoiceDetail(id) {
+  const invoice = await invoices.get(id);
+  if (!invoice) return null;
 
   const items = await invoiceItems.listByInvoice(invoice.id);
   const itemsWithWorkerName = await Promise.all(
@@ -90,7 +94,7 @@ router.get('/:id', async (req, res) => {
   );
   const company = await hostCompanies.get(invoice.hostCompanyId);
 
-  res.json({
+  return {
     ...(await withTotals(invoice)),
     items: itemsWithWorkerName,
     ...computeTaxSummary(itemsWithWorkerName),
@@ -99,7 +103,13 @@ router.get('/:id', async (req, res) => {
       ? { id: company.id, name: company.name, companyNo: company.companyNo, address: company.address }
       : null,
     issuer: ISSUER,
-  });
+  };
+}
+
+router.get('/:id', async (req, res) => {
+  const detail = await buildInvoiceDetail(Number(req.params.id));
+  if (!detail) return res.status(404).json({ error: '請求書が見つかりません。' });
+  res.json(detail);
 });
 
 // 受入企業を選択すると、その企業に在籍する対象者ごとに固定料金の明細を自動生成する
@@ -228,6 +238,19 @@ router.delete('/:id/items/:itemId', async (req, res) => {
   }
   await invoiceItems.remove(itemId);
   res.json({ ok: true });
+});
+
+// 実際の請求書様式（口座引落のご案内）に沿ったPDFを直接出力する
+router.get('/:id/pdf', async (req, res) => {
+  const detail = await buildInvoiceDetail(Number(req.params.id));
+  if (!detail) return res.status(404).json({ error: '請求書が見つかりません。' });
+
+  const doc = new PDFDocument({ size: 'A4', margin: 0 });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename=invoice_${detail.invoiceNumber}.pdf`);
+  doc.pipe(res);
+  generateInvoicePdf(doc, detail);
+  doc.end();
 });
 
 // 簡易Excel出力（正式な請求書テンプレートは別途対応予定）
