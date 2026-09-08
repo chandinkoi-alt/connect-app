@@ -81,9 +81,10 @@ select {
 .sidebar-brand {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
-  padding: 20px 18px;
+  padding: 24px 18px 20px;
+  text-align: center;
 }
 
 .brand-logo {
@@ -95,6 +96,7 @@ select {
   font-size: 12.5px;
   color: #94a3b8;
   font-family: var(--font-jp);
+  letter-spacing: 0.02em;
 }
 
 .sidebar-nav {
@@ -150,32 +152,43 @@ select {
 }
 
 .org-chip {
-  padding: 10px 8px;
-  border-radius: var(--radius-sm);
+  padding: 16px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: center;
 }
 
 .org-name {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #f8fafc;
   font-family: var(--font-jp);
   line-height: 1.4;
+  letter-spacing: 0.01em;
 }
 
 .org-role {
-  font-size: 11px;
-  color: #94a3b8;
+  display: inline-block;
+  margin-top: 7px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  font-size: 10.5px;
+  font-weight: 600;
   font-family: var(--font-jp);
-  margin-top: 2px;
+  letter-spacing: 0.02em;
 }
 
 .org-license-list {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
+  text-align: left;
 }
 
 .org-license {
@@ -193,10 +206,41 @@ select {
 .org-license-value {
   display: block;
   font-size: 12.5px;
-  font-weight: 600;
-  color: #cbd5e1;
+  font-weight: 700;
+  color: #e2e8f0;
   letter-spacing: 0.02em;
-  margin-top: 1px;
+  margin-top: 2px;
+}
+
+.sidebar-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-sidebar-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-jp);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.sidebar-logout-btn .nav-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #fca5a5;
 }
 
 .main-area {
@@ -233,30 +277,21 @@ select {
   flex-shrink: 0;
 }
 
-.topbar-user-name {
-  font-size: 14.5px;
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--color-text);
   font-family: var(--font-jp);
-  margin-right: 10px;
-  white-space: nowrap;
-}
-
-.topbar-user-action {
-  font-size: 11.5px;
-  color: var(--color-primary);
-  font-family: var(--font-jp);
-  white-space: nowrap;
-}
-
-.topbar-user-action:hover {
-  background: var(--color-primary-soft);
-}
-
-@media (max-width: 480px) {
-  .topbar-user-name {
-    display: none;
-  }
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+  cursor: default;
+  flex-shrink: 0;
 }
 
 main#tabContent {
@@ -290,7 +325,18 @@ main#tabContent {
     display: none;
   }
   .sidebar-footer {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-top: none;
+  }
+  .org-chip {
     display: none;
+  }
+  .sidebar-logout-btn {
+    width: auto;
+    margin-top: 0;
+    padding: 8px 14px;
   }
   main#tabContent {
     padding: 18px 16px 40px;
