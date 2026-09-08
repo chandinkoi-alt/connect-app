@@ -111,7 +111,8 @@ const SCHEMA = `
     consultationContact TEXT,
     insuranceStatus TEXT,
     tokuteiTrainingStatus TEXT,
-    tokuteiTrainingDate TEXT
+    tokuteiTrainingDate TEXT,
+    generation TEXT
   );
 
   CREATE TABLE IF NOT EXISTS worker_registrations (
@@ -179,7 +180,8 @@ const SCHEMA = `
     description TEXT NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
     unitPrice INTEGER NOT NULL DEFAULT 0,
-    amount INTEGER NOT NULL DEFAULT 0
+    amount INTEGER NOT NULL DEFAULT 0,
+    taxCategory TEXT NOT NULL DEFAULT 'taxable'
   );
 `;
 
@@ -213,6 +215,10 @@ const MIGRATION_COLUMNS = {
     ['educationWorkHistory', 'TEXT'], ['dormitoryInfo', 'TEXT'], ['healthCheckDate', 'TEXT'],
     ['specialHealthChecks', 'TEXT'], ['consultationContact', 'TEXT'], ['insuranceStatus', 'TEXT'],
     ['tokuteiTrainingStatus', 'TEXT'], ['tokuteiTrainingDate', 'TEXT'],
+    ['generation', 'TEXT'],
+  ],
+  invoice_items: [
+    ['taxCategory', 'TEXT'],
   ],
 };
 
@@ -304,7 +310,7 @@ const workers = makeRepo('workers', [
   'homeCountryAddress', 'notes', 'statusType', 'currentStage', 'baseSalary', 'workingHours',
   'workStartTime', 'workEndTime', 'holidays', 'payDate', 'overtimeRate', 'allowances', 'deductions',
   'educationWorkHistory', 'dormitoryInfo', 'healthCheckDate', 'specialHealthChecks',
-  'consultationContact', 'insuranceStatus', 'tokuteiTrainingStatus', 'tokuteiTrainingDate',
+  'consultationContact', 'insuranceStatus', 'tokuteiTrainingStatus', 'tokuteiTrainingDate', 'generation',
 ]);
 
 const workerRegistrations = makeRepo('worker_registrations', [
@@ -344,7 +350,7 @@ const invoices = makeRepo('invoices', [
 ]);
 
 const invoiceItems = makeRepo('invoice_items', [
-  'invoiceId', 'workerId', 'itemType', 'description', 'quantity', 'unitPrice', 'amount',
+  'invoiceId', 'workerId', 'itemType', 'description', 'quantity', 'unitPrice', 'amount', 'taxCategory',
 ]);
 
 invoiceItems.listByInvoice = async (invoiceId) => {

@@ -145,6 +145,7 @@ const TabWorkers = {
       `
       <div class="profile-grid">
         <div><label>No.</label><div>${w.personalNo ?? '－'}</div></div>
+        <div><label>期生</label><div>${escapeHtml(w.generation) || '－'}</div></div>
         <div><label>フリガナ</label><div>${escapeHtml(w.nameKana) || '－'}</div></div>
         <div><label>国籍</label><div>${escapeHtml(w.nationality) || '－'}</div></div>
         <div><label>性別</label><div>${escapeHtml(w.gender) || '－'}</div></div>
@@ -160,6 +161,7 @@ const TabWorkers = {
         <div><label>職種・作業</label><div>${escapeHtml(w.jobCategory) || '－'}</div></div>
         <div><label>入国日</label><div>${escapeHtml(w.entryDate) || '－'}</div></div>
         <div><label>実習・就労開始日</label><div>${escapeHtml(w.trainingStartDate) || '－'}</div></div>
+        <div><label>雇用契約期間</label><div>${w.contractStartDate || w.contractEndDate ? `${escapeHtml(w.contractStartDate) || '？'}～${escapeHtml(w.contractEndDate) || '？'}` : '－'}</div></div>
         <div><label>ステータス</label><div>${escapeHtml(w.currentStage) || '－'}</div></div>
         <div class="span-2"><label>本国住所</label><div>${escapeHtml(w.homeCountryAddress) || '－'}</div></div>
         <div class="span-2"><label>学歴・職歴</label><div>${escapeHtml(w.educationWorkHistory) || '－'}</div></div>
@@ -376,7 +378,10 @@ const TabWorkers = {
           <div class="form-group"><label>受入企業</label><select id="f_hostCompanyId"><option value="">選択</option>${companyOptions}</select></div>
           <div class="form-group"><label>送出機関</label><select id="f_sendingOrgId"><option value="">選択</option>${orgOptions}</select></div>
         </div>
-        <div class="form-group"><label>職種・作業</label><input id="f_jobCategory" value="${worker ? escapeHtml(worker.jobCategory) : ''}"></div>
+        <div class="form-row">
+          <div class="form-group"><label>職種・作業</label><input id="f_jobCategory" value="${worker ? escapeHtml(worker.jobCategory) : ''}"></div>
+          <div class="form-group"><label>期生</label><input id="f_generation" placeholder="例: 1期生" value="${worker ? escapeHtml(worker.generation) : ''}"></div>
+        </div>
         <div class="form-row">
           <div class="form-group"><label>雇用契約開始日</label><input id="f_contractStartDate" type="date" value="${worker ? worker.contractStartDate || '' : ''}"></div>
           <div class="form-group"><label>雇用契約終了日</label><input id="f_contractEndDate" type="date" value="${worker ? worker.contractEndDate || '' : ''}"></div>
@@ -460,7 +465,7 @@ const TabWorkers = {
         visaType: val('f_visaType'), visaExpiryDate: val('f_visaExpiryDate'), entryDate: val('f_entryDate'),
         trainingStartDate: val('f_trainingStartDate'),
         hostCompanyId: val('f_hostCompanyId') || null, sendingOrgId: val('f_sendingOrgId') || null,
-        jobCategory: val('f_jobCategory'), contractStartDate: val('f_contractStartDate'),
+        jobCategory: val('f_jobCategory'), generation: val('f_generation'), contractStartDate: val('f_contractStartDate'),
         contractEndDate: val('f_contractEndDate'), educationWorkHistory: val('f_educationWorkHistory'),
         currentStage: val('f_currentStage'),
         tokuteiTrainingStatus: val('f_tokuteiTrainingStatus'), tokuteiTrainingDate: val('f_tokuteiTrainingDate'),
