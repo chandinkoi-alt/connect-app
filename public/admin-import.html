@@ -50,6 +50,17 @@
       <div class="progress-msg" id="backfillProgress">処理中です…</div>
       <div id="backfillResult" class="result-box" hidden></div>
     </div>
+
+    <div class="import-box">
+      <div class="import-title">③ データバックアップ</div>
+      <div class="import-sub">
+        アプリの不具合や誤操作に備えて、現在登録されている全データ（受入企業・送出機関・対象者・請求書など）を
+        1つのファイルとしてダウンロードできます。定期的にダウンロードし、パソコン等に保管しておくことをおすすめします。<br />
+        ※ ログイン情報（パスワード）は含まれません。
+      </div>
+      <button type="button" class="btn btn-primary" id="backupBtn">バックアップをダウンロード</button>
+      <div id="backupResult" class="result-box" hidden></div>
+    </div>
   </div>
 
   <script>
@@ -162,6 +173,17 @@
 
     wireForm('importForm', 'importFileInput', 'importResult', 'importProgress', 'importSubmitBtn');
     wireForm('backfillForm', 'backfillFileInput', 'backfillResult', 'backfillProgress', 'backfillSubmitBtn');
+
+    document.getElementById('backupBtn').addEventListener('click', () => {
+      const resultBox = document.getElementById('backupResult');
+      resultBox.hidden = false;
+      resultBox.classList.remove('error');
+      resultBox.textContent = 'バックアップファイルを生成しています…';
+      window.location.href = '/api/admin/import/backup';
+      setTimeout(() => {
+        resultBox.textContent = 'ダウンロードを開始しました。ファイルの保存先をご確認ください。';
+      }, 1500);
+    });
   </script>
 </body>
 </html>
