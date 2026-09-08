@@ -18,7 +18,7 @@ const TabVisits = {
             <thead>
               <tr><th>種別</th><th>対象者</th><th>受入企業</th><th>予定日</th><th>状態</th><th>結果</th><th></th></tr>
             </thead>
-            <tbody id="visitTableBody"><tr><td colspan="7">読み込み中...</td></tr></tbody>
+            <tbody id="visitTableBody">${loadingRowHtml(7)}</tbody>
           </table>
         </div>
       </section>
@@ -136,7 +136,7 @@ const TabVisits = {
   },
 
   async remove(id) {
-    if (!confirm('この記録を削除しますか？')) return;
+    if (!(await ConfirmDialog.show('この記録を削除しますか？\nこの操作は取り消せません。'))) return;
     await api.del(`/api/visits/${id}`);
     await this.load();
   },

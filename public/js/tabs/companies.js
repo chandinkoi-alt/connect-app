@@ -34,7 +34,7 @@ const TabCompanies = {
             <thead>
               <tr><th>No.</th><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th>重要期限</th><th>状態</th><th></th></tr>
             </thead>
-            <tbody id="companyTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
+            <tbody id="companyTableBody">${loadingRowHtml(9)}</tbody>
           </table>
         </div>
       </section>
@@ -113,7 +113,8 @@ const TabCompanies = {
   async toggleStatus(company) {
     const nextStatus = company.status === 'withdrawn' ? 'active' : 'withdrawn';
     const message = nextStatus === 'withdrawn' ? `${company.name} を退会にしますか？` : `${company.name} の受入を再開しますか？`;
-    if (!confirm(message)) return;
+    const okLabel = nextStatus === 'withdrawn' ? '退会にする' : '受入再開する';
+    if (!(await ConfirmDialog.show(message, { okLabel, danger: nextStatus === 'withdrawn' }))) return;
     await api.put(`/api/host-companies/${company.id}/status`, { status: nextStatus });
     await this.load();
   },
@@ -226,6 +227,7 @@ const TabCompanies = {
 
     document.querySelectorAll('button[data-action="delete-reg"]').forEach((btn) => {
       btn.addEventListener('click', async () => {
+        if (!(await ConfirmDialog.show('この登録項目を削除しますか？'))) return;
         await api.del(`/api/host-companies/${companyId}/registrations/${btn.dataset.id}`);
         const regs = await api.get(`/api/host-companies/${companyId}/registrations`);
         document.getElementById('companyRegsList').innerHTML = this.renderRegistrations(regs);
@@ -347,7 +349,7 @@ const TabCompanies = {
   },
 
   async remove(id) {
-    if (!confirm('この受入企業を削除しますか？')) return;
+    if (!(await ConfirmDialog.show('この受入企業を削除しますか？\nこの操作は取り消せません。'))) return;
     await api.del(`/api/host-companies/${id}`);
     await this.load();
   },

@@ -89,8 +89,24 @@
     </div>
   </div>
 
+  <div id="confirmOverlay" class="confirm-overlay" hidden>
+    <div class="confirm-box">
+      <div class="confirm-icon">⚠️</div>
+      <p id="confirmMessage" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirmCancelBtn" class="btn btn-secondary btn-small">キャンセル</button>
+        <button id="confirmOkBtn" class="btn btn-danger btn-small">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bootOverlay" class="boot-overlay">
+    <div class="spinner spinner-lg"></div>
+  </div>
+
   <script src="js/api.js"></script>
   <script src="js/modal.js"></script>
+  <script src="js/confirm.js"></script>
   <script src="js/tabs/dashboard.js"></script>
   <script src="js/tabs/recruitment.js"></script>
   <script src="js/tabs/sendingOrgs.js"></script>

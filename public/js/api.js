@@ -56,6 +56,11 @@ function formatErrors(err) {
   return 'エラーが発生しました。';
 }
 
+// 表の読み込み中プレースホルダー行（丸いスピナー付き）。colspan は列数に合わせる。
+function loadingRowHtml(colspan) {
+  return `<tr><td colspan="${colspan}"><div class="loading-inline"><span class="spinner"></span> 読み込み中...</div></td></tr>`;
+}
+
 function debounce(fn, wait) {
   let timer;
   return (...args) => {
