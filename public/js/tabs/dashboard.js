@@ -1,3 +1,14 @@
+const TASK_ICONS = {
+  '在留期限': '🪪',
+  '認定申請 準備': '📝',
+  '認定申請 提出期限': '📋',
+  '企業 登録・許認可': '🏢',
+  '対象者 登録・保険': '💳',
+  '送出機関 覚書(MOU)': '🤝',
+  '訪問指導': '🏠',
+  '監査': '🔍',
+};
+
 const TabDashboard = {
   currentFilter: '',
 
@@ -74,19 +85,22 @@ const TabDashboard = {
       return;
     }
 
-    const badgeClass = { expired: 'badge-expired', warning: 'badge-warning' };
     listEl.innerHTML = `
       <ul class="task-list">
         ${visible
-          .map(
-            (t) => `
-          <li class="task-item">
-            <span class="badge ${badgeClass[t.level]}">${t.category}</span>
-            <a href="#" class="task-link" data-tab="${t.link.tab}">${escapeHtml(t.title)}</a>
-            <span class="task-due">${escapeHtml(t.dueDate)}${t.days !== null ? (t.days < 0 ? `（${Math.abs(t.days)}日超過）` : `（残り${t.days}日）`) : ''}</span>
-            <button class="link-btn link-delete" data-dismiss="${t.id}">対応済みにする</button>
-          </li>`
-          )
+          .map((t) => {
+            const daysLabel = t.days === null ? '' : t.days < 0 ? `${Math.abs(t.days)}日超過` : `残り${t.days}日`;
+            return `
+          <li class="task-item level-${t.level}">
+            <span class="task-icon">${TASK_ICONS[t.category] || '⏰'}</span>
+            <div class="task-body">
+              <span class="task-category">${escapeHtml(t.category)}</span>
+              <a href="#" class="task-link" data-tab="${t.link.tab}">${escapeHtml(t.title)}</a>
+            </div>
+            <span class="task-due">${escapeHtml(t.dueDate)}${daysLabel ? ` <strong>（${daysLabel}）</strong>` : ''}</span>
+            <button class="btn btn-secondary btn-small" data-dismiss="${t.id}">対応済みにする</button>
+          </li>`;
+          })
           .join('')}
       </ul>
     `;

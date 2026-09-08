@@ -8,10 +8,20 @@ const {
   workerRegistrations,
   sendingOrgs,
 } = require('../db');
-const { getDaysUntil, getUrgency, getWorkerVisaUrgency } = require('../lib/dates');
+const { getDaysUntil, getUrgency, getWorkerVisaUrgency, isWithinMonths } = require('../lib/dates');
 const { getEffectiveExpiryDate } = require('../lib/companyRegistrationExpiry');
 
 const router = express.Router();
+
+// タスクの見出しに企業№・個人連番を添える（一覧画面の番号と対応づけて探しやすくする）。
+function workerLabel(worker) {
+  if (!worker) return '対象者';
+  return worker.personalNo ? `No.${worker.personalNo} ${worker.name}` : worker.name;
+}
+function companyLabel(company) {
+  if (!company) return '企業';
+  return company.companyNo ? `No.${company.companyNo} ${company.name}` : company.name;
+}
 
 async function buildTasks() {
   const tasks = [];
@@ -39,13 +49,32 @@ async function buildTasks() {
       tasks.push({
         id: `worker-visa-${w.id}`,
         category: '在留期限',
-        title: `${w.name} の在留期限`,
+        title: `${workerLabel(w)} の在留期限`,
         dueDate: w.visaExpiryDate,
         level: urgency.level,
         days: urgency.days,
         link: { tab: 'workers', id: w.id },
       });
     }
+  }
+
+  // 在留期限の5ヶ月前になったら、更新の認定申請案件がまだ無い就労中の対象者に
+  // 早めに書類準備を始めるよう知らせる。既に案件（認定済み以外）が作成済みなら
+  // 対応が始まっているとみなし、重複して表示しない。
+  const workersWithOpenCase = new Set(allCases.filter((c) => c.status !== '認定済み').map((c) => c.workerId));
+  for (const w of allWorkers) {
+    if (w.currentStage !== '就労中' || workersWithOpenCase.has(w.id)) continue;
+    if (!isWithinMonths(w.visaExpiryDate, 5)) continue;
+    const days = getDaysUntil(w.visaExpiryDate);
+    tasks.push({
+      id: `worker-renewal-prep-${w.id}`,
+      category: '認定申請 準備',
+      title: `${workerLabel(w)} の次回更新書類を準備`,
+      dueDate: w.visaExpiryDate,
+      level: 'warning',
+      days,
+      link: { tab: 'workers', id: w.id },
+    });
   }
 
   for (const c of allCases) {
@@ -56,7 +85,7 @@ async function buildTasks() {
       tasks.push({
         id: `case-due-${c.id}`,
         category: '認定申請 提出期限',
-        title: `${worker ? worker.name : '対象者'} の認定申請`,
+        title: `${workerLabel(worker)} の認定申請`,
         dueDate: c.dueDate,
         level: urgency.level,
         days: urgency.days,
@@ -74,7 +103,7 @@ async function buildTasks() {
       tasks.push({
         id: `visit-${v.id}`,
         category: v.type,
-        title: `${company ? company.name : ''}${worker ? ' / ' + worker.name : ''} の${v.type}`,
+        title: `${company ? companyLabel(company) : ''}${worker ? ' / ' + workerLabel(worker) : ''} の${v.type}`,
         dueDate: v.scheduledDate,
         level: urgency.level,
         days: urgency.days,
@@ -92,7 +121,7 @@ async function buildTasks() {
       tasks.push({
         id: `company-reg-${r.id}`,
         category: '企業 登録・許認可',
-        title: `${company ? company.name : '企業'} の${r.label}`,
+        title: `${companyLabel(company)} の${r.label}`,
         dueDate: expiryDate,
         level: urgency.level,
         days: urgency.days,
@@ -109,7 +138,7 @@ async function buildTasks() {
       tasks.push({
         id: `worker-reg-${r.id}`,
         category: '対象者 登録・保険',
-        title: `${worker ? worker.name : '対象者'} の${r.label}`,
+        title: `${workerLabel(worker)} の${r.label}`,
         dueDate: r.expiryDate,
         level: urgency.level,
         days: urgency.days,

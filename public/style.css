@@ -576,6 +576,37 @@ tbody tr:hover {
   background: #fafafa;
 }
 
+/* 受入企業一覧など列数の多い表: 横スクロールしても左端の No.・企業名列が
+   隠れないよう固定する（列幅を固定してNo.列の右端位置を確定させている）。 */
+.table-wrap-freeze th:first-child,
+.table-wrap-freeze td:first-child {
+  position: sticky;
+  left: 0;
+  width: 52px;
+  min-width: 52px;
+  background: var(--color-surface);
+  z-index: 1;
+}
+
+.table-wrap-freeze th:nth-child(2),
+.table-wrap-freeze td:nth-child(2) {
+  position: sticky;
+  left: 52px;
+  background: var(--color-surface);
+  z-index: 1;
+  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15);
+}
+
+.table-wrap-freeze th:first-child,
+.table-wrap-freeze th:nth-child(2) {
+  z-index: 2;
+}
+
+.table-wrap-freeze tbody tr:hover td:first-child,
+.table-wrap-freeze tbody tr:hover td:nth-child(2) {
+  background: #fafafa;
+}
+
 tbody tr:last-child td {
   border-bottom: none;
 }
@@ -775,27 +806,77 @@ tbody tr.row-dimmed:hover {
 
 .task-list {
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .task-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  transition: box-shadow 0.12s, border-color 0.12s;
 }
 
-.task-item:last-child {
-  border-bottom: none;
+.task-item:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.task-item.level-warning {
+  border-left-color: var(--color-warning);
+}
+
+.task-item.level-expired {
+  border-left-color: var(--color-danger);
+}
+
+.task-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: var(--color-warning-soft);
+}
+
+.task-item.level-expired .task-icon {
+  background: var(--color-danger-soft);
+}
+
+.task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-category {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-family: var(--font-jp);
 }
 
 .task-link {
   color: var(--color-text);
   font-weight: 600;
+  font-size: 13.5px;
   text-decoration: none;
-  flex: 1;
   font-family: var(--font-jp);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-link:hover {
@@ -803,9 +884,23 @@ tbody tr.row-dimmed:hover {
 }
 
 .task-due {
+  flex-shrink: 0;
   color: var(--color-text-muted);
   font-size: 12px;
   font-family: var(--font-jp);
+  white-space: nowrap;
+}
+
+.task-due strong {
+  color: inherit;
+}
+
+.task-item.level-expired .task-due strong {
+  color: var(--color-danger);
+}
+
+.task-item.level-warning .task-due strong {
+  color: var(--color-warning);
 }
 
 /* ---------- Profile 360 ---------- */

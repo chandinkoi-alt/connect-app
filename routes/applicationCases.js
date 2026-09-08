@@ -13,7 +13,9 @@ function joinCase(appCase, workerById, companyById) {
     ...appCase,
     checklist: JSON.parse(appCase.checklist || '[]'),
     workerName: worker ? worker.name : '',
+    workerPersonalNo: worker ? worker.personalNo : null,
     companyName: company ? company.name : '',
+    companyNo: company ? company.companyNo : null,
   };
 }
 
