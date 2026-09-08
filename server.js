@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const session = require('express-session');
 const { ready } = require('./db');
+const { buildBackupPayload, backupFilename } = require('./lib/backupData');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,31 @@ app.use(
 app.get('/health', (req, res) => res.send('OK'));
 
 app.use('/api/auth', require('./routes/auth'));
+
+// 週次の自動バックアップ用（Google Driveへの定期アップロードなど、外部の
+// スケジューラから叩く想定）。ログインセッションではなく、環境変数BACKUP_TOKEN
+// と一致する秘密トークンで認証する。BACKUP_TOKEN未設定の場合は常に401とし、
+// 誤って無認証で全データが取得できる状態にならないようにする。
+function safeTokenEquals(a, b) {
+  const bufA = Buffer.from(String(a || ''));
+  const bufB = Buffer.from(String(b || ''));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+app.get('/api/admin/import/backup-auto', async (req, res) => {
+  if (!process.env.BACKUP_TOKEN || !safeTokenEquals(req.query.token, process.env.BACKUP_TOKEN)) {
+    return res.status(401).json({ error: '認証が必要です。' });
+  }
+  try {
+    const payload = await buildBackupPayload();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=${backupFilename()}`);
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (err) {
+    res.status(500).json({ error: 'バックアップの作成に失敗しました: ' + err.message });
+  }
+});
 
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) return next();

@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { Worker } = require('worker_threads');
-const { client } = require('../db');
+const { buildBackupPayload, backupFilename } = require('../lib/backupData');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -76,30 +76,13 @@ router.get('/status', (req, res) => {
   res.json(currentJob);
 });
 
-// アプリ障害・誤操作・Turso側の事故に備えた、全データのバックアップ用ダウンロード。
-// テーブル一覧はハードコードせずsqlite_masterから動的に取得する（新しいテーブルが
-// 増えても追随できるようにするため）。usersのpasswordHashだけは、バックアップ
-// ファイルが外部に漏れた場合の被害を最小化するため含めない（復元時は各自パスワード
-// 再設定が必要）。
+// アプリ障害・誤操作・Turso側の事故に備えた、全データのバックアップ用ダウンロード
+// （管理画面のボタンから、ログイン済みユーザーが手動で実行する用）。
 router.get('/backup', async (req, res) => {
   try {
-    const tablesRs = await client.execute(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-    );
-    const tables = {};
-    for (const { name } of tablesRs.rows) {
-      const rs = await client.execute(`SELECT * FROM ${name}`);
-      tables[name] = rs.rows.map((row) => {
-        const plain = { ...row };
-        if (name === 'users') delete plain.passwordHash;
-        return plain;
-      });
-    }
-
-    const payload = { exportedAt: new Date().toISOString(), tables };
-    const filename = `connect-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const payload = await buildBackupPayload();
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.setHeader('Content-Disposition', `attachment; filename=${backupFilename()}`);
     res.send(JSON.stringify(payload, null, 2));
   } catch (err) {
     res.status(500).json({ error: 'バックアップの作成に失敗しました: ' + err.message });
