@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const { Worker } = require('worker_threads');
 const { buildBackupPayload, backupFilename } = require('../lib/backupData');
+const { uploadBackupToDrive } = require('../lib/googleDriveBackup');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -86,6 +87,18 @@ router.get('/backup', async (req, res) => {
     res.send(JSON.stringify(payload, null, 2));
   } catch (err) {
     res.status(500).json({ error: 'バックアップの作成に失敗しました: ' + err.message });
+  }
+});
+
+// Google Driveへの手動バックアップ（管理画面のボタンから、ログイン済みユーザーが
+// 即時実行する用。毎週自動で走るバックアップと同じ処理を今すぐ試したい・実行したい
+// 場合に使う）。
+router.post('/backup-to-drive', async (req, res) => {
+  try {
+    const file = await uploadBackupToDrive();
+    res.json({ ok: true, fileName: file.name, fileId: file.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Google Driveへのアップロードに失敗しました: ' + err.message });
   }
 });
 

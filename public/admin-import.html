@@ -60,6 +60,12 @@
       </div>
       <button type="button" class="btn btn-primary" id="backupBtn">バックアップをダウンロード</button>
       <div id="backupResult" class="result-box" hidden></div>
+      <hr style="margin:20px 0; border:none; border-top:1px solid var(--color-border);" />
+      <div class="import-sub" style="margin-bottom:12px;">
+        毎週金曜日に自動でGoogle Driveへバックアップが保存されるよう設定済みです。今すぐ試したい場合は下のボタンから手動実行できます。
+      </div>
+      <button type="button" class="btn btn-secondary" id="backupDriveBtn">Google Driveに今すぐバックアップ</button>
+      <div id="backupDriveResult" class="result-box" hidden></div>
     </div>
   </div>
 
@@ -183,6 +189,30 @@
       setTimeout(() => {
         resultBox.textContent = 'ダウンロードを開始しました。ファイルの保存先をご確認ください。';
       }, 1500);
+    });
+
+    document.getElementById('backupDriveBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const resultBox = document.getElementById('backupDriveResult');
+      btn.disabled = true;
+      resultBox.hidden = false;
+      resultBox.classList.remove('error');
+      resultBox.textContent = 'Google Driveにアップロード中です…';
+      try {
+        const res = await fetch('/api/admin/import/backup-to-drive', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          resultBox.classList.add('error');
+          resultBox.textContent = data.error || 'エラーが発生しました。';
+        } else {
+          resultBox.textContent = `アップロードが完了しました: ${data.fileName}`;
+        }
+      } catch (err) {
+        resultBox.classList.add('error');
+        resultBox.textContent = '通信エラーが発生しました: ' + err.message;
+      } finally {
+        btn.disabled = false;
+      }
     });
   </script>
 </body>

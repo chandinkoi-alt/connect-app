@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const session = require('express-session');
 const { ready } = require('./db');
 const { buildBackupPayload, backupFilename } = require('./lib/backupData');
+const { uploadBackupToDrive } = require('./lib/googleDriveBackup');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +61,22 @@ app.get('/api/admin/import/backup-auto', async (req, res) => {
     res.send(JSON.stringify(payload, null, 2));
   } catch (err) {
     res.status(500).json({ error: 'バックアップの作成に失敗しました: ' + err.message });
+  }
+});
+
+// 週次自動バックアップ（Google Driveへの定期アップロード）用。上と同じBACKUP_TOKEN
+// で認証する。JSON本体は返さず、サーバー側で完結してDriveへ直接アップロードする
+// （実データを外部のスケジューラ・チャットのやり取りに一切通さないため、
+// データ量が増えても安全・確実）。
+app.get('/api/admin/import/backup-to-drive-auto', async (req, res) => {
+  if (!process.env.BACKUP_TOKEN || !safeTokenEquals(req.query.token, process.env.BACKUP_TOKEN)) {
+    return res.status(401).json({ error: '認証が必要です。' });
+  }
+  try {
+    const file = await uploadBackupToDrive();
+    res.json({ ok: true, fileName: file.name, fileId: file.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Google Driveへのアップロードに失敗しました: ' + err.message });
   }
 });
 
