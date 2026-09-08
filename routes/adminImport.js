@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const { Worker } = require('worker_threads');
+const { startImport } = require('../lib/excelImport');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -9,9 +8,14 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 // 既存のExcel管理台帳（受入企業データ・監理外国人名簿）を一括インポートする（一回限りの移行用）。
 // ログイン済みユーザーのみ利用可能（server.js の requireAuth 配下にマウント）。
 //
-// 実際の取り込み処理（Excel解析＋Turso remoteへの大量書き込み）はCPUと待機時間の両方を
-// 要するため、worker_threads で完全に別スレッド実行する。こうすることで処理中も
-// サーバー本体（ログイン・他の画面・進捗ポーリング自体）が固まらず応答し続けられる。
+// Turso（リモートDB）への大量書き込みは数十秒〜数分かかることがあり、1つのHTTPリクエスト
+// 内で完結させようとするとタイムアウトしてしまう。そのためアップロードは即座に受理して
+// バックグラウンドで処理を進め、進捗・結果は別エンドポイントでポーリングする。
+//
+// 注: 以前は処理を worker_threads で完全に別スレッド実行していたが、新しいV8インスタンスを
+// 立ち上げる分メモリを二重に消費し、メモリの少ない環境（Renderの無料枠など）でOOMを
+// 引き起こしたため、通常のPromiseベースの非同期処理に戻した。DB書き込みはI/O待ちが
+// 大半でその都度イベントループに制御が戻るため、サーバー全体が完全に固まることはない。
 let currentJob = null;
 
 router.post('/excel', upload.single('file'), (req, res) => {
@@ -20,24 +24,16 @@ router.post('/excel', upload.single('file'), (req, res) => {
     return res.status(409).json({ error: '別のインポート処理が実行中です。完了までお待ちください。' });
   }
 
-  currentJob = { status: 'running', summary: null, error: null };
-
-  const worker = new Worker(path.join(__dirname, '../lib/importWorkerEntry.js'), {
-    workerData: { buffer: req.file.buffer },
-  });
-
-  worker.on('message', (msg) => {
-    currentJob.summary = msg.summary;
-    if (msg.type === 'done') currentJob.status = 'done';
-    if (msg.type === 'error') {
+  const { summary, promise } = startImport(req.file.buffer);
+  currentJob = { status: 'running', summary, error: null };
+  promise
+    .then(() => {
+      currentJob.status = 'done';
+    })
+    .catch((err) => {
       currentJob.status = 'error';
-      currentJob.error = msg.error;
-    }
-  });
-  worker.on('error', (err) => {
-    currentJob.status = 'error';
-    currentJob.error = err.message;
-  });
+      currentJob.error = err.message;
+    });
 
   res.json({ status: 'started' });
 });
