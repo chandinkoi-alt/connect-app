@@ -47,6 +47,7 @@ app.use('/api/visits', require('./routes/visits'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/billing', require('./routes/billing'));
+app.use('/api/admin/import', require('./routes/adminImport'));
 
 // index.html / login.html はブラウザやbfcacheにキャッシュさせない
 // （ログアウト後に戻るボタンで古い認証済み画面が一瞬表示される問題を防ぐ）
