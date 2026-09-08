@@ -24,8 +24,17 @@ services:
       # ランダムな長い文字列を手動で設定すると、再デプロイ後もログイン状態が保持される。
       - key: SESSION_SECRET
         sync: false
-      # 週次自動バックアップ（/api/admin/import/backup-auto）の認証用トークン。
-      # ランダムな長い文字列を手動で設定する。この値を知っている人だけが
-      # ログインなしで全データのバックアップを取得できるため、他人に教えない。
+      # 週次自動バックアップ（/api/admin/import/backup-auto, backup-to-drive-auto）の
+      # 認証用トークン。ランダムな長い文字列を手動で設定する。この値を知っている
+      # 人だけがログインなしで全データのバックアップを取得できるため、他人に教えない。
       - key: BACKUP_TOKEN
+        sync: false
+      # Google Driveへの自動バックアップ用（サービスアカウント方式）。
+      # Google Cloud ConsoleでサービスアカウントのJSON鍵を作成し、その中身を
+      # そのまま貼り付ける。バックアップ保存先フォルダをそのサービスアカウントの
+      # メールアドレスに「編集者」として共有しておく必要がある。
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY
+        sync: false
+      # バックアップの保存先Google DriveフォルダのID（フォルダのURL末尾の文字列）。
+      - key: GOOGLE_DRIVE_FOLDER_ID
         sync: false
