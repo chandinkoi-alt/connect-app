@@ -86,6 +86,7 @@ function buildRecord(body, existing = {}) {
     insuranceStatus: (body.insuranceStatus || '').trim(),
     tokuteiTrainingStatus: body.tokuteiTrainingStatus || '',
     tokuteiTrainingDate: body.tokuteiTrainingDate || '',
+    generation: (body.generation ?? existing.generation ?? '').toString().trim(),
   };
 }
 

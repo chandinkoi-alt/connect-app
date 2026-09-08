@@ -131,7 +131,7 @@ const TabInvoices = {
       </div>
       <div class="form-row">
         <div class="form-group"><label>発行日</label><input id="f_issueDate" type="date" value="${inv.issueDate || ''}"></div>
-        <div class="form-group"><label>支払期限</label><input id="f_dueDate" type="date" value="${inv.dueDate || ''}"></div>
+        <div class="form-group"><label>口座引落日</label><input id="f_dueDate" type="date" value="${inv.dueDate || ''}"></div>
       </div>
       <div class="form-group"><label>備考</label><input id="f_notes" value="${escapeHtml(inv.notes) || ''}"></div>
       <button class="btn btn-secondary btn-small" id="saveHeaderBtn" style="width:auto;">請求書情報を保存</button>
@@ -139,13 +139,19 @@ const TabInvoices = {
       <h4 class="section-title">明細</h4>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>項目</th><th>数量</th><th>単価</th><th>金額</th><th></th></tr></thead>
+          <thead><tr><th>項目</th><th>区分</th><th>数量</th><th>単価</th><th>金額</th><th></th></tr></thead>
           <tbody id="itemsBody">
             ${inv.items
               .map(
                 (item) => `
               <tr data-item-id="${item.id}">
                 <td><input class="item-desc" value="${escapeHtml(item.description)}" style="min-width:160px;"></td>
+                <td>
+                  <select class="item-tax">
+                    <option value="taxable" ${item.taxCategory !== 'exempt' ? 'selected' : ''}>10%</option>
+                    <option value="exempt" ${item.taxCategory === 'exempt' ? 'selected' : ''}>対象外</option>
+                  </select>
+                </td>
                 <td><input class="item-qty" type="number" min="0" value="${item.quantity}" style="width:56px;"></td>
                 <td><input class="item-price" type="number" min="0" value="${item.unitPrice}" style="width:90px;"></td>
                 <td>${item.amount.toLocaleString('ja-JP')}円</td>
@@ -156,9 +162,16 @@ const TabInvoices = {
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="3" style="text-align:right; font-weight:bold;">合計</td>
-              <td style="font-weight:bold;">${inv.totalAmount.toLocaleString('ja-JP')}円</td>
-              <td></td>
+              <td colspan="4" style="text-align:right;">課税対象外額</td>
+              <td colspan="2">${inv.taxExemptTotal.toLocaleString('ja-JP')}円</td>
+            </tr>
+            <tr>
+              <td colspan="4" style="text-align:right;">課税対象額（内消費税 ${inv.taxAmount.toLocaleString('ja-JP')}円）</td>
+              <td colspan="2">${inv.taxableTotal.toLocaleString('ja-JP')}円</td>
+            </tr>
+            <tr>
+              <td colspan="4" style="text-align:right; font-weight:bold;">今回引落額</td>
+              <td colspan="2" style="font-weight:bold;">${inv.grandTotal.toLocaleString('ja-JP')}円</td>
             </tr>
           </tfoot>
         </table>
@@ -167,14 +180,18 @@ const TabInvoices = {
       <h4 class="section-title">追加項目</h4>
       <div class="form-row">
         <div class="form-group"><label>項目名</label><input id="newItemDesc" placeholder="例: 送迎費"></div>
-        <div class="form-group"><label>数量</label><input id="newItemQty" type="number" value="1" min="0"></div>
+        <div class="form-group"><label>区分</label>
+          <select id="newItemTax"><option value="taxable">10%</option><option value="exempt">対象外</option></select>
+        </div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>数量</label><input id="newItemQty" type="number" value="1" min="0"></div>
         <div class="form-group"><label>単価（円）</label><input id="newItemPrice" type="number" value="0" min="0"></div>
-        <div class="form-group" style="align-self:flex-end;"><button class="btn btn-secondary btn-small" id="addItemBtn" style="width:100%;">追加する</button></div>
       </div>
+      <button class="btn btn-secondary btn-small" id="addItemBtn" style="width:auto;">追加する</button>
 
       <div class="form-actions" style="margin-top:15px;">
+        <button class="btn btn-primary" id="printInvoiceBtn">🖨 請求書を表示・印刷</button>
         <button class="btn btn-success" id="exportInvoiceBtn">📥 Excel出力（簡易版）</button>
       </div>
     `
@@ -202,6 +219,7 @@ const TabInvoices = {
           description: row.querySelector('.item-desc').value,
           quantity: row.querySelector('.item-qty').value,
           unitPrice: row.querySelector('.item-price').value,
+          taxCategory: row.querySelector('.item-tax').value,
         });
         await this.load();
         this.openDetail(id);
@@ -209,6 +227,7 @@ const TabInvoices = {
       row.querySelectorAll('input').forEach((input) => {
         input.addEventListener('change', save);
       });
+      row.querySelector('.item-tax').addEventListener('change', save);
     });
 
     document.querySelectorAll('button[data-action="delete-item"]').forEach((btn) => {
@@ -227,6 +246,7 @@ const TabInvoices = {
         description,
         quantity: document.getElementById('newItemQty').value,
         unitPrice: document.getElementById('newItemPrice').value,
+        taxCategory: document.getElementById('newItemTax').value,
       });
       await this.load();
       this.openDetail(id);
@@ -234,6 +254,10 @@ const TabInvoices = {
 
     document.getElementById('exportInvoiceBtn').addEventListener('click', () => {
       window.location.href = `/api/invoices/${id}/export`;
+    });
+
+    document.getElementById('printInvoiceBtn').addEventListener('click', () => {
+      window.open(`/invoice-print.html?id=${id}`, '_blank');
     });
   },
 

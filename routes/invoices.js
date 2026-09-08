@@ -1,10 +1,13 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
 const { invoices, invoiceItems, hostCompanies, workers, billingRates } = require('../db');
+const { ISSUER } = require('../lib/invoiceSettings');
 
 const router = express.Router();
 
 const STATUSES = ['下書き', '発行済み', '支払済み'];
+const TAX_CATEGORIES = ['taxable', 'exempt'];
+const TAX_RATE = 0.1;
 
 async function withTotals(invoice) {
   const items = await invoiceItems.listByInvoice(invoice.id);
@@ -14,6 +17,25 @@ async function withTotals(invoice) {
     companyName: company ? company.name : '',
     itemCount: items.length,
     totalAmount: items.reduce((sum, item) => sum + item.amount, 0),
+  };
+}
+
+// 明細の課税区分から「口座引落のご案内」の税額サマリーを計算する。
+// unitPrice/amount は税込金額として扱う（例: 33,000円/月＝税込）ため、
+// 内消費税は課税対象額から逆算する（対象額 - 対象額÷1.1）。
+function computeTaxSummary(items) {
+  let taxableTotal = 0;
+  let exemptTotal = 0;
+  for (const item of items) {
+    if (item.taxCategory === 'exempt') exemptTotal += item.amount;
+    else taxableTotal += item.amount;
+  }
+  const taxAmount = Math.round(taxableTotal - taxableTotal / (1 + TAX_RATE));
+  return {
+    taxExemptTotal: exemptTotal,
+    taxableTotal,
+    taxAmount,
+    grandTotal: taxableTotal + exemptTotal,
   };
 }
 
@@ -56,11 +78,28 @@ router.get('/:id', async (req, res) => {
   const itemsWithWorkerName = await Promise.all(
     items.map(async (item) => {
       const worker = item.workerId ? await workers.get(item.workerId) : null;
-      return { ...item, workerName: worker ? worker.name : '' };
+      return {
+        ...item,
+        taxCategory: item.taxCategory || 'taxable',
+        workerName: worker ? worker.name : '',
+        workerGeneration: worker ? worker.generation : '',
+        workerContractStartDate: worker ? worker.contractStartDate : '',
+        workerContractEndDate: worker ? worker.contractEndDate : '',
+      };
     })
   );
+  const company = await hostCompanies.get(invoice.hostCompanyId);
 
-  res.json({ ...(await withTotals(invoice)), items: itemsWithWorkerName });
+  res.json({
+    ...(await withTotals(invoice)),
+    items: itemsWithWorkerName,
+    ...computeTaxSummary(itemsWithWorkerName),
+    invoiceNumber: String(invoice.id).padStart(4, '0'),
+    company: company
+      ? { id: company.id, name: company.name, companyNo: company.companyNo, address: company.address }
+      : null,
+    issuer: ISSUER,
+  });
 });
 
 // 受入企業を選択すると、その企業に在籍する対象者ごとに固定料金の明細を自動生成する
@@ -97,6 +136,7 @@ router.post('/', async (req, res) => {
       quantity: 1,
       unitPrice,
       amount: unitPrice,
+      taxCategory: 'taxable',
     });
   }
 
@@ -136,6 +176,7 @@ router.post('/:id/items', async (req, res) => {
 
   const quantity = Number(req.body.quantity) || 1;
   const unitPrice = Number(req.body.unitPrice) || 0;
+  const taxCategory = TAX_CATEGORIES.includes(req.body.taxCategory) ? req.body.taxCategory : 'taxable';
 
   const item = await invoiceItems.insert({
     invoiceId,
@@ -145,6 +186,7 @@ router.post('/:id/items', async (req, res) => {
     quantity,
     unitPrice,
     amount: quantity * unitPrice,
+    taxCategory,
   });
   res.status(201).json(item);
 });
@@ -160,6 +202,9 @@ router.put('/:id/items/:itemId', async (req, res) => {
   const description = (req.body.description ?? existing.description).toString().trim();
   const quantity = req.body.quantity !== undefined ? Number(req.body.quantity) : existing.quantity;
   const unitPrice = req.body.unitPrice !== undefined ? Number(req.body.unitPrice) : existing.unitPrice;
+  const taxCategory = TAX_CATEGORIES.includes(req.body.taxCategory)
+    ? req.body.taxCategory
+    : existing.taxCategory || 'taxable';
 
   const updated = await invoiceItems.update(itemId, {
     invoiceId,
@@ -169,6 +214,7 @@ router.put('/:id/items/:itemId', async (req, res) => {
     quantity,
     unitPrice,
     amount: quantity * unitPrice,
+    taxCategory,
   });
   res.json(updated);
 });
