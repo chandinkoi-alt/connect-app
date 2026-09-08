@@ -40,15 +40,21 @@
     })();
 
     function renderSummary(data) {
+      // ワーカースレッド起動直後は summary がまだ null（最初の進捗報告前）のことがある。
+      const s = data.summary || {
+        companiesImported: 0, companiesTotal: 0, workersImported: 0, workersTotal: 0,
+        workersSkippedOtherOrg: 0, sendingOrgsCreated: 0, registrationsCreated: 0,
+        applicationCasesCreated: 0, auditRecordsCreated: 0, errors: [],
+      };
       return (
-        `受入企業: ${data.summary.companiesImported} / ${data.summary.companiesTotal}件\n` +
-        `対象者: ${data.summary.workersImported} / ${data.summary.workersTotal}件\n` +
-        `（他団体管理のため除外: ${data.summary.workersSkippedOtherOrg}件）\n` +
-        `送出機関 新規作成: ${data.summary.sendingOrgsCreated}件\n` +
-        `登録・保険項目: ${data.summary.registrationsCreated}件\n` +
-        `認定申請 下書き: ${data.summary.applicationCasesCreated}件\n` +
-        `監査記録: ${data.summary.auditRecordsCreated}件\n` +
-        (data.summary.errors.length ? `\nエラー:\n${data.summary.errors.join('\n')}` : '')
+        `受入企業: ${s.companiesImported} / ${s.companiesTotal}件\n` +
+        `対象者: ${s.workersImported} / ${s.workersTotal}件\n` +
+        `（他団体管理のため除外: ${s.workersSkippedOtherOrg}件）\n` +
+        `送出機関 新規作成: ${s.sendingOrgsCreated}件\n` +
+        `登録・保険項目: ${s.registrationsCreated}件\n` +
+        `認定申請 下書き: ${s.applicationCasesCreated}件\n` +
+        `監査記録: ${s.auditRecordsCreated}件\n` +
+        (s.errors.length ? `\nエラー:\n${s.errors.join('\n')}` : '')
       );
     }
 
@@ -57,34 +63,36 @@
       const progress = document.getElementById('progress');
       const submitBtn = document.getElementById('submitBtn');
 
-      const res = await fetch('/api/admin/import/status');
-      const data = await res.json();
+      try {
+        const res = await fetch('/api/admin/import/status');
+        const data = await res.json();
 
-      if (data.status === 'idle') {
-        setTimeout(pollStatus, 1000);
-        return;
-      }
+        if (data.status === 'idle' || data.status === 'running') {
+          resultBox.hidden = false;
+          resultBox.classList.remove('error');
+          resultBox.textContent = '処理中…\n' + renderSummary(data);
+          setTimeout(pollStatus, 2000);
+          return;
+        }
 
-      if (data.status === 'running') {
+        progress.style.display = 'none';
+        submitBtn.disabled = false;
         resultBox.hidden = false;
+
+        if (data.status === 'error') {
+          resultBox.classList.add('error');
+          resultBox.textContent = 'エラーが発生しました: ' + (data.error || '');
+          return;
+        }
+
         resultBox.classList.remove('error');
-        resultBox.textContent = '処理中…\n' + renderSummary(data);
-        setTimeout(pollStatus, 2000);
-        return;
+        resultBox.textContent = renderSummary(data) + ((data.summary && data.summary.errors.length) ? '' : '\nエラーなし');
+      } catch (err) {
+        // ポーリング自体の通信エラーはリトライし続ける（無限に沈黙して固まるのを防ぐ）。
+        resultBox.hidden = false;
+        resultBox.textContent = '処理中…（通信エラーが発生しましたが再試行します: ' + err.message + '）';
+        setTimeout(pollStatus, 3000);
       }
-
-      progress.style.display = 'none';
-      submitBtn.disabled = false;
-      resultBox.hidden = false;
-
-      if (data.status === 'error') {
-        resultBox.classList.add('error');
-        resultBox.textContent = 'エラーが発生しました: ' + (data.error || '');
-        return;
-      }
-
-      resultBox.classList.remove('error');
-      resultBox.textContent = renderSummary(data) + (data.summary.errors.length ? '' : '\nエラーなし');
     }
 
     document.getElementById('importForm').addEventListener('submit', async (e) => {
