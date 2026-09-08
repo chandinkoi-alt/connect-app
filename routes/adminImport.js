@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
-const { startImport } = require('../lib/excelImport');
+const path = require('path');
+const { Worker } = require('worker_threads');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -8,14 +9,11 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 // 既存のExcel管理台帳（受入企業データ・監理外国人名簿）を一括インポートする（一回限りの移行用）。
 // ログイン済みユーザーのみ利用可能（server.js の requireAuth 配下にマウント）。
 //
-// Turso（リモートDB）への大量書き込みは数十秒〜数分かかることがあり、1つのHTTPリクエスト
-// 内で完結させようとするとタイムアウトしてしまう。そのためアップロードは即座に受理して
-// バックグラウンドで処理を進め、進捗・結果は別エンドポイントでポーリングする。
-//
-// 注: 以前は処理を worker_threads で完全に別スレッド実行していたが、新しいV8インスタンスを
-// 立ち上げる分メモリを二重に消費し、メモリの少ない環境（Renderの無料枠など）でOOMを
-// 引き起こしたため、通常のPromiseベースの非同期処理に戻した。DB書き込みはI/O待ちが
-// 大半でその都度イベントループに制御が戻るため、サーバー全体が完全に固まることはない。
+// 実際の取り込み処理（Excel解析＋Turso remoteへの大量書き込み）はCPU・メモリの両方を
+// 要する重い処理であり、メモリの少ない環境（Renderの無料枠など）ではメモリ上限に達して
+// 失敗することがある。worker_threads で別スレッド実行することで、その失敗が発生しても
+// メインのExpressサーバー本体（ログイン・他画面・進捗ポーリング自体）が道連れにならず、
+// 通常どおり応答し続けられる。
 let currentJob = null;
 
 router.post('/excel', upload.single('file'), (req, res) => {
@@ -24,16 +22,30 @@ router.post('/excel', upload.single('file'), (req, res) => {
     return res.status(409).json({ error: '別のインポート処理が実行中です。完了までお待ちください。' });
   }
 
-  const { summary, promise } = startImport(req.file.buffer);
-  currentJob = { status: 'running', summary, error: null };
-  promise
-    .then(() => {
-      currentJob.status = 'done';
-    })
-    .catch((err) => {
+  currentJob = { status: 'running', summary: null, error: null };
+
+  const worker = new Worker(path.join(__dirname, '../lib/importWorkerEntry.js'), {
+    workerData: { buffer: req.file.buffer },
+  });
+
+  worker.on('message', (msg) => {
+    currentJob.summary = msg.summary;
+    if (msg.type === 'done') currentJob.status = 'done';
+    if (msg.type === 'error') {
       currentJob.status = 'error';
-      currentJob.error = err.message;
-    });
+      currentJob.error = msg.error;
+    }
+  });
+  worker.on('error', (err) => {
+    currentJob.status = 'error';
+    currentJob.error = err.message;
+  });
+  worker.on('exit', (code) => {
+    if (code !== 0 && currentJob.status === 'running') {
+      currentJob.status = 'error';
+      currentJob.error = `インポート処理が予期せず終了しました（メモリ不足の可能性があります。exit code ${code}）。`;
+    }
+  });
 
   res.json({ status: 'started' });
 });
