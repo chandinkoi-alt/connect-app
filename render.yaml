@@ -24,3 +24,8 @@ services:
       # ランダムな長い文字列を手動で設定すると、再デプロイ後もログイン状態が保持される。
       - key: SESSION_SECRET
         sync: false
+      # 週次自動バックアップ（/api/admin/import/backup-auto）の認証用トークン。
+      # ランダムな長い文字列を手動で設定する。この値を知っている人だけが
+      # ログインなしで全データのバックアップを取得できるため、他人に教えない。
+      - key: BACKUP_TOKEN
+        sync: false
