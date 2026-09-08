@@ -66,6 +66,10 @@ app.get('/login.html', noStore, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+app.get('/admin-import.html', noStore, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-import.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 ready
