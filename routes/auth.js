@@ -1,8 +1,19 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const { users } = require('../db');
 
 const router = express.Router();
+
+// 総当たり攻撃対策：ログイン・初回セットアップは15分間に10回までに制限する
+// （IPごと。成功したリクエストもカウントに含める＝単純だが十分な抑止力になる）。
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'ログイン試行回数が多すぎます。しばらく時間をおいてから再度お試しください。' },
+});
 
 function publicUser(user) {
   return { id: user.id, username: user.username, name: user.name };
@@ -14,7 +25,7 @@ router.get('/setup-needed', async (req, res) => {
 });
 
 // 初回のみ：管理者アカウントを作成する（ユーザーが1件も無い場合だけ有効）
-router.post('/setup', async (req, res) => {
+router.post('/setup', loginLimiter, async (req, res) => {
   const count = await users.count();
   if (count > 0) {
     return res.status(403).json({ error: 'セットアップは既に完了しています。' });
@@ -38,7 +49,7 @@ router.post('/setup', async (req, res) => {
   res.status(201).json(publicUser(user));
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ errors: ['ユーザー名とパスワードを入力してください。'] });

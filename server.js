@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const crypto = require('crypto');
 const session = require('express-session');
@@ -10,6 +11,11 @@ const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+// 画面がインラインscriptで構成されているページがあるため、CSPのみ無効化して
+// クリックジャッキング対策・MIMEスニッフィング対策等の基本的なセキュリティ
+// ヘッダーだけを付与する。
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 
