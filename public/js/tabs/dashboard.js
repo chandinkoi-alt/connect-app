@@ -7,6 +7,7 @@ const TASK_ICONS = {
   '送出機関 覚書(MOU)': '🤝',
   '訪問指導': '🏠',
   '監査': '🔍',
+  '面談': '🗣️',
 };
 
 const TabDashboard = {

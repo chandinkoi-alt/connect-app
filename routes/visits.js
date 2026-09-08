@@ -1,10 +1,11 @@
 const express = require('express');
 const { visitsAudits, workers, hostCompanies } = require('../db');
 const { getDaysUntil, getUrgency } = require('../lib/dates');
+const { ensureVisitSchedule } = require('../lib/visitScheduler');
 
 const router = express.Router();
 
-const VISIT_TYPES = ['訪問指導', '監査'];
+const VISIT_TYPES = ['訪問指導', '監査', '面談'];
 
 function joinVisit(item, workerById, companyById) {
   const worker = item.workerId ? workerById.get(item.workerId) : null;
@@ -42,6 +43,10 @@ function buildRecord(body, existing = {}) {
 router.get('/types', (req, res) => res.json(VISIT_TYPES));
 
 router.get('/', async (req, res) => {
+  // 監査（3ヶ月ごと）・面談（技能実習1号は1ヶ月ごと）の次回予定を、必要に応じて
+  // 自動生成してから一覧を返す（未完了の予定が既にある対象には生成しない）。
+  await ensureVisitSchedule();
+
   const { workerId, hostCompanyId, type } = req.query;
   const [allVisits, allWorkers, allCompanies] = await Promise.all([
     visitsAudits.list(),

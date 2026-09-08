@@ -7,7 +7,7 @@ const TabVisits = {
     container.innerHTML = `
       <section class="card">
         <div class="card-title-row">
-          <h2 class="card-title">面談・監査（訪問指導・監査）</h2>
+          <h2 class="card-title">面談・監査（訪問指導・監査・面談）</h2>
           <button class="btn btn-primary btn-small" id="addVisitBtn">＋ 新規登録</button>
         </div>
         <div class="filter-bar">
