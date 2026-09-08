@@ -11,9 +11,9 @@ const STATUS_TYPES = ['技能実習', '育成就労', '特定技能'];
 const STAGE_OPTIONS = ['準備中', '就労中', '一時帰国中', '帰国済み'];
 const TOKUTEI_TRAINING_STATUSES = ['未受講', '受講中', '受講済み'];
 
-async function withJoins(worker) {
-  const company = worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
-  const sendingOrg = worker.sendingOrgId ? await sendingOrgs.get(worker.sendingOrgId) : null;
+function joinWorker(worker, companyById, sendingOrgById) {
+  const company = worker.hostCompanyId ? companyById.get(worker.hostCompanyId) : null;
+  const sendingOrg = worker.sendingOrgId ? sendingOrgById.get(worker.sendingOrgId) : null;
   return {
     ...worker,
     companyName: company ? company.name : '',
@@ -21,6 +21,25 @@ async function withJoins(worker) {
     visaStatus: getUrgency(getDaysUntil(worker.visaExpiryDate)),
     specialHealthChecks: JSON.parse(worker.specialHealthChecks || '[]'),
   };
+}
+
+async function withJoins(worker) {
+  const company = worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
+  const sendingOrg = worker.sendingOrgId ? await sendingOrgs.get(worker.sendingOrgId) : null;
+  return joinWorker(
+    worker,
+    new Map(company ? [[company.id, company]] : []),
+    new Map(sendingOrg ? [[sendingOrg.id, sendingOrg]] : [])
+  );
+}
+
+// 一覧表示など、大量の対象者をまとめて結合するとき用。企業・送出機関を1回ずつ取得して
+// Mapで引くことで、件数分だけ .get() を呼ぶ（Tursoへ通信するたびに時間がかかる）のを防ぐ。
+async function withJoinsAll(workerList) {
+  const [allCompanies, allSendingOrgs] = await Promise.all([hostCompanies.list(), sendingOrgs.list()]);
+  const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+  const sendingOrgById = new Map(allSendingOrgs.map((o) => [o.id, o]));
+  return workerList.map((w) => joinWorker(w, companyById, sendingOrgById));
 }
 
 function buildRecord(body, existing = {}) {
@@ -86,7 +105,7 @@ router.get('/special-health-check-types', (req, res) => res.json(SPECIAL_HEALTH_
 
 router.get('/', async (req, res) => {
   const { statusType, hostCompanyId, search } = req.query;
-  let result = await Promise.all((await workers.list()).map(withJoins));
+  let result = await withJoinsAll(await workers.list());
 
   if (statusType) result = result.filter((w) => w.statusType === statusType);
   if (hostCompanyId) result = result.filter((w) => w.hostCompanyId === Number(hostCompanyId));
@@ -228,7 +247,7 @@ router.get('/export/roster', async (req, res) => {
     { header: '備考', key: 'notes', width: 24 },
   ];
   sheet.getRow(1).font = { bold: true };
-  const rosterRows = await Promise.all((await workers.list()).map(withJoins));
+  const rosterRows = await withJoinsAll(await workers.list());
   rosterRows.forEach((w) => sheet.addRow(w));
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

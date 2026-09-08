@@ -6,15 +6,25 @@ const router = express.Router();
 
 const VISIT_TYPES = ['訪問指導', '監査'];
 
-async function withJoins(item) {
-  const worker = item.workerId ? await workers.get(item.workerId) : null;
-  const company = item.hostCompanyId ? await hostCompanies.get(item.hostCompanyId) : null;
+function joinVisit(item, workerById, companyById) {
+  const worker = item.workerId ? workerById.get(item.workerId) : null;
+  const company = item.hostCompanyId ? companyById.get(item.hostCompanyId) : null;
   return {
     ...item,
     workerName: worker ? worker.name : '',
     companyName: company ? company.name : '',
     urgency: item.completedDate ? { label: '実施済み', level: 'ok', days: null } : getUrgency(getDaysUntil(item.scheduledDate), 14),
   };
+}
+
+async function withJoins(item) {
+  const worker = item.workerId ? await workers.get(item.workerId) : null;
+  const company = item.hostCompanyId ? await hostCompanies.get(item.hostCompanyId) : null;
+  return joinVisit(
+    item,
+    new Map(worker ? [[worker.id, worker]] : []),
+    new Map(company ? [[company.id, company]] : [])
+  );
 }
 
 function buildRecord(body, existing = {}) {
@@ -33,7 +43,14 @@ router.get('/types', (req, res) => res.json(VISIT_TYPES));
 
 router.get('/', async (req, res) => {
   const { workerId, hostCompanyId, type } = req.query;
-  let result = await Promise.all((await visitsAudits.list()).map(withJoins));
+  const [allVisits, allWorkers, allCompanies] = await Promise.all([
+    visitsAudits.list(),
+    workers.list(),
+    hostCompanies.list(),
+  ]);
+  const workerById = new Map(allWorkers.map((w) => [w.id, w]));
+  const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+  let result = allVisits.map((v) => joinVisit(v, workerById, companyById));
   if (workerId) result = result.filter((v) => v.workerId === Number(workerId));
   if (hostCompanyId) result = result.filter((v) => v.hostCompanyId === Number(hostCompanyId));
   if (type) result = result.filter((v) => v.type === type);

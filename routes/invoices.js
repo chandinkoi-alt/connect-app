@@ -23,7 +23,29 @@ router.get('/', async (req, res) => {
   const { hostCompanyId } = req.query;
   let list = await invoices.list();
   if (hostCompanyId) list = list.filter((inv) => inv.hostCompanyId === Number(hostCompanyId));
-  res.json(await Promise.all(list.map(withTotals)));
+
+  // 件数分だけ .get() で問い合わせるとTursoへの通信が積み重なって遅くなるため、
+  // 明細・企業をまとめて取得してからMapで引く。
+  const [allItems, allCompanies] = await Promise.all([invoiceItems.list(), hostCompanies.list()]);
+  const itemsByInvoiceId = new Map();
+  for (const item of allItems) {
+    if (!itemsByInvoiceId.has(item.invoiceId)) itemsByInvoiceId.set(item.invoiceId, []);
+    itemsByInvoiceId.get(item.invoiceId).push(item);
+  }
+  const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+
+  res.json(
+    list.map((invoice) => {
+      const items = itemsByInvoiceId.get(invoice.id) || [];
+      const company = companyById.get(invoice.hostCompanyId);
+      return {
+        ...invoice,
+        companyName: company ? company.name : '',
+        itemCount: items.length,
+        totalAmount: items.reduce((sum, item) => sum + item.amount, 0),
+      };
+    })
+  );
 });
 
 router.get('/:id', async (req, res) => {

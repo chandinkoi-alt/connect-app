@@ -6,15 +6,25 @@ const router = express.Router();
 
 const STATUSES = ['書類準備中', '提出済み', '追加書類対応中', '認定済み'];
 
-async function withJoins(appCase) {
-  const worker = appCase.workerId ? await workers.get(appCase.workerId) : null;
-  const company = worker && worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
+function joinCase(appCase, workerById, companyById) {
+  const worker = appCase.workerId ? workerById.get(appCase.workerId) : null;
+  const company = worker && worker.hostCompanyId ? companyById.get(worker.hostCompanyId) : null;
   return {
     ...appCase,
     checklist: JSON.parse(appCase.checklist || '[]'),
     workerName: worker ? worker.name : '',
     companyName: company ? company.name : '',
   };
+}
+
+async function withJoins(appCase) {
+  const worker = appCase.workerId ? await workers.get(appCase.workerId) : null;
+  const company = worker && worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
+  return joinCase(
+    appCase,
+    new Map(worker ? [[worker.id, worker]] : []),
+    new Map(company ? [[company.id, company]] : [])
+  );
 }
 
 function buildRecord(body, existing = {}) {
@@ -37,17 +47,22 @@ router.get('/statuses', (req, res) => res.json(STATUSES));
 
 router.get('/', async (req, res) => {
   const { workerId, companyId, status } = req.query;
-  let result = await Promise.all((await applicationCases.list()).map(withJoins));
+  const [allCases, allWorkers, allCompanies] = await Promise.all([
+    applicationCases.list(),
+    workers.list(),
+    hostCompanies.list(),
+  ]);
+  const workerById = new Map(allWorkers.map((w) => [w.id, w]));
+  const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+
+  let result = allCases.map((c) => joinCase(c, workerById, companyById));
   if (workerId) result = result.filter((c) => c.workerId === Number(workerId));
   if (status) result = result.filter((c) => c.status === status);
   if (companyId) {
-    const checks = await Promise.all(
-      result.map(async (c) => {
-        const worker = await workers.get(c.workerId);
-        return worker && worker.hostCompanyId === Number(companyId);
-      })
-    );
-    result = result.filter((_, i) => checks[i]);
+    result = result.filter((c) => {
+      const worker = workerById.get(c.workerId);
+      return worker && worker.hostCompanyId === Number(companyId);
+    });
   }
   res.json(result);
 });
