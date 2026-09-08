@@ -8,40 +8,67 @@ const TabCompanies = {
           <h2 class="card-title">受入企業一覧</h2>
           <button class="btn btn-primary btn-small" id="addCompanyBtn">＋ 新規登録</button>
         </div>
+        <div class="filter-bar">
+          <input type="text" id="companySearchInput" placeholder="企業名・業種・所在地で検索" />
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th></th></tr>
+              <tr><th>No.</th><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th>状態</th><th></th></tr>
             </thead>
-            <tbody id="companyTableBody"><tr><td colspan="6">読み込み中...</td></tr></tbody>
+            <tbody id="companyTableBody"><tr><td colspan="8">読み込み中...</td></tr></tbody>
           </table>
         </div>
       </section>
     `;
     this.dormitoryOptions = await api.get('/api/host-companies/dormitory-options');
     document.getElementById('addCompanyBtn').addEventListener('click', () => this.openEditForm());
+    document.getElementById('companySearchInput').addEventListener('input', debounce(() => this.load(), 300));
     await this.load();
   },
 
   async load() {
-    const companies = await api.get('/api/host-companies?status=active');
+    const search = (document.getElementById('companySearchInput')?.value || '').trim().toLowerCase();
+    let companies = await api.get('/api/host-companies');
+    // リード（見込み客）はカンバン画面で管理するため、ここでは受入中・退会のみ表示する
+    companies = companies.filter((c) => c.status === 'active' || c.status === 'withdrawn');
+    if (search) {
+      companies = companies.filter(
+        (c) =>
+          c.name.toLowerCase().includes(search) ||
+          (c.industry || '').toLowerCase().includes(search) ||
+          (c.address || '').toLowerCase().includes(search)
+      );
+    }
+    // 在籍中を上、退会を下へ。それぞれの中では企業№（Excel由来の通し番号）順、無いものは末尾。
+    companies.sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'withdrawn' ? 1 : -1;
+      const an = a.companyNo ?? Infinity;
+      const bn = b.companyNo ?? Infinity;
+      if (an !== bn) return an - bn;
+      return a.name.localeCompare(b.name);
+    });
+
     const tbody = document.getElementById('companyTableBody');
     if (!tbody) return;
     if (!companies.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">受入企業が登録されていません。</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">受入企業が登録されていません。</td></tr>';
       return;
     }
     tbody.innerHTML = companies
       .map(
         (c) => `
-      <tr>
+      <tr class="${c.status === 'withdrawn' ? 'row-dimmed' : ''}">
+        <td>${c.companyNo ?? '－'}</td>
         <td><a href="#" class="link-view" data-id="${c.id}">${escapeHtml(c.name)}</a></td>
         <td>${escapeHtml(c.industry)}</td>
         <td>${escapeHtml(c.address)}</td>
         <td>${escapeHtml(c.contactPerson)}</td>
         <td>${escapeHtml(c.phone)}</td>
+        <td><span class="badge ${c.status === 'withdrawn' ? 'badge-muted' : 'badge-ok'}">${c.status === 'withdrawn' ? '退会' : '受入中'}</span></td>
         <td class="row-actions">
           <button class="link-btn link-edit" data-id="${c.id}" data-action="edit">編集</button>
+          <button class="link-btn" data-id="${c.id}" data-action="toggle-status">${c.status === 'withdrawn' ? '受入再開' : '退会にする'}</button>
           <button class="link-btn link-delete" data-id="${c.id}" data-action="delete">削除</button>
         </td>
       </tr>`
@@ -58,9 +85,18 @@ const TabCompanies = {
       btn.addEventListener('click', () => {
         const id = Number(btn.dataset.id);
         if (btn.dataset.action === 'edit') this.openEditForm(companies.find((c) => c.id === id));
+        else if (btn.dataset.action === 'toggle-status') this.toggleStatus(companies.find((c) => c.id === id));
         else this.remove(id);
       });
     });
+  },
+
+  async toggleStatus(company) {
+    const nextStatus = company.status === 'withdrawn' ? 'active' : 'withdrawn';
+    const message = nextStatus === 'withdrawn' ? `${company.name} を退会にしますか？` : `${company.name} の受入を再開しますか？`;
+    if (!confirm(message)) return;
+    await api.put(`/api/host-companies/${company.id}/status`, { status: nextStatus });
+    await this.load();
   },
 
   async openProfile(company) {
@@ -75,6 +111,8 @@ const TabCompanies = {
       `${company.name}（受入企業一覧）`,
       `
       <div class="profile-grid">
+        <div><label>No.</label><div>${company.companyNo ?? '－'}</div></div>
+        <div><label>状態</label><div><span class="badge ${company.status === 'withdrawn' ? 'badge-muted' : 'badge-ok'}">${company.status === 'withdrawn' ? '退会' : '受入中'}</span></div></div>
         <div><label>業種</label><div>${escapeHtml(company.industry) || '－'}</div></div>
         <div><label>所在地</label><div>${escapeHtml(company.address) || '－'}</div></div>
         <div><label>担当者</label><div>${escapeHtml(company.contactPerson) || '－'}</div></div>

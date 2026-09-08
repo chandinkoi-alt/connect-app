@@ -25,9 +25,9 @@ const TabWorkers = {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>氏名</th><th>制度区分</th><th>在留資格</th><th>受入企業</th><th>在留期限</th><th>ステータス</th><th>状態</th><th></th></tr>
+              <tr><th>No.</th><th>氏名</th><th>制度区分</th><th>在留資格</th><th>受入企業</th><th>在留期限</th><th>ステータス</th><th>状態</th><th></th></tr>
             </thead>
-            <tbody id="workerTableBody"><tr><td colspan="8">読み込み中...</td></tr></tbody>
+            <tbody id="workerTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -75,25 +75,36 @@ const TabWorkers = {
     if (search) params.set('search', search);
     if (statusType) params.set('statusType', statusType);
 
-    const workers = await api.get(`/api/workers?${params.toString()}`);
+    let workers = await api.get(`/api/workers?${params.toString()}`);
     const tbody = document.getElementById('workerTableBody');
     if (!workers.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">対象者が登録されていません。</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">対象者が登録されていません。</td></tr>';
       return;
     }
+    // 帰国済み・失踪は一覧の下部にまとめる（それぞれのグループ内では在留期限の緊急度順を維持）。
+    const INACTIVE_STAGES = ['帰国済み', '失踪'];
+    workers = [...workers].sort((a, b) => {
+      const aInactive = INACTIVE_STAGES.includes(a.currentStage);
+      const bInactive = INACTIVE_STAGES.includes(b.currentStage);
+      return aInactive === bInactive ? 0 : aInactive ? 1 : -1;
+    });
+
     const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown' };
     tbody.innerHTML = workers
       .map((w) => {
         const s = w.visaStatus;
         const daysLabel = s.days === null ? '' : s.days < 0 ? `（${Math.abs(s.days)}日超過）` : `（残り${s.days}日）`;
+        const isInactive = INACTIVE_STAGES.includes(w.currentStage);
+        const stageBadgeClass = w.currentStage === '失踪' ? 'badge-expired' : isInactive ? 'badge-muted' : 'badge-ok';
         return `
-        <tr>
+        <tr class="${isInactive ? 'row-dimmed' : ''}">
+          <td>${w.personalNo ?? '－'}</td>
           <td><a href="#" class="link-view" data-id="${w.id}">${escapeHtml(w.name)}</a></td>
           <td>${escapeHtml(w.statusType)}</td>
           <td>${escapeHtml(w.visaType)}</td>
           <td>${escapeHtml(w.companyName)}</td>
           <td>${escapeHtml(w.visaExpiryDate)}</td>
-          <td>${escapeHtml(w.currentStage) || '－'}</td>
+          <td><span class="badge ${stageBadgeClass}">${escapeHtml(w.currentStage) || '－'}</span></td>
           <td><span class="badge ${badgeClass[s.level]}">${s.label}${daysLabel}</span></td>
           <td class="row-actions">
             <button class="link-btn link-edit" data-id="${w.id}" data-action="edit">編集</button>
@@ -129,6 +140,7 @@ const TabWorkers = {
       `${w.name}（人材一覧）`,
       `
       <div class="profile-grid">
+        <div><label>No.</label><div>${w.personalNo ?? '－'}</div></div>
         <div><label>フリガナ</label><div>${escapeHtml(w.nameKana) || '－'}</div></div>
         <div><label>国籍</label><div>${escapeHtml(w.nationality) || '－'}</div></div>
         <div><label>性別</label><div>${escapeHtml(w.gender) || '－'}</div></div>

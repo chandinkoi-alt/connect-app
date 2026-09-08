@@ -7,30 +7,48 @@
   <link rel="stylesheet" href="style.css" />
   <style>
     body { display: flex; justify-content: center; padding: 40px 16px; }
-    .import-box { width: 100%; max-width: 560px; background: var(--color-surface); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-lg); }
+    .import-box { width: 100%; max-width: 560px; background: var(--color-surface); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-lg); margin-bottom: 24px; }
     .import-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
     .import-sub { font-size: 13px; color: var(--color-text-muted); margin-bottom: 24px; line-height: 1.7; }
     .result-box { margin-top: 20px; padding: 16px; border-radius: var(--radius-md); background: #f4f6fb; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
     .result-box.error { background: #fdecec; color: #b42318; }
-    #progress { display: none; margin-top: 12px; font-size: 13px; color: var(--color-text-muted); }
+    .progress-msg { display: none; margin-top: 12px; font-size: 13px; color: var(--color-text-muted); }
   </style>
 </head>
 <body>
-  <div class="import-box">
-    <div class="import-title">Excel一括インポート（受入企業・人材一覧）</div>
-    <div class="import-sub">
-      既存の管理Excel（受入企業データ / 監理外国人名簿 / 監理外国人名簿(2) の3シートを含むファイル）をアップロードすると、
-      受入企業・対象者・登録保険情報・認定申請の下書きを一括登録します。<br />
-      ※ このデータベースに一度取り込んだ後にもう一度実行すると、同じデータが重複登録されます。基本的に一回のみ実行してください。
-    </div>
-    <form id="importForm">
-      <div class="form-group">
-        <input type="file" id="fileInput" accept=".xlsx" required />
+  <div>
+    <div class="import-box">
+      <div class="import-title">① Excel一括インポート（受入企業・人材一覧）</div>
+      <div class="import-sub">
+        既存の管理Excel（受入企業データ / 監理外国人名簿 / 監理外国人名簿(2) の3シートを含むファイル）をアップロードすると、
+        受入企業・対象者・登録保険情報・認定申請の下書きを一括登録します。<br />
+        ※ このデータベースに一度取り込んだ後にもう一度実行すると、同じデータが重複登録されます。基本的に一回のみ実行してください。
       </div>
-      <button type="submit" class="btn btn-primary" id="submitBtn">インポート実行</button>
-    </form>
-    <div id="progress">アップロード・処理中です。データ量によっては数分かかることがあります…</div>
-    <div id="result" class="result-box" hidden></div>
+      <form id="importForm" data-endpoint="/api/admin/import/excel">
+        <div class="form-group">
+          <input type="file" id="importFileInput" accept=".xlsx" required />
+        </div>
+        <button type="submit" class="btn btn-primary" id="importSubmitBtn">インポート実行</button>
+      </form>
+      <div class="progress-msg" id="importProgress">アップロード・処理中です。データ量によっては数分かかることがあります…</div>
+      <div id="importResult" class="result-box" hidden></div>
+    </div>
+
+    <div class="import-box">
+      <div class="import-title">② 番号・退会/失踪状態の補完</div>
+      <div class="import-sub">
+        ①で既にインポート済みのデータに対して、企業№・個人連番、および退会した企業／失踪した対象者の状態だけを、
+        同じExcelファイルから名前で照合して補完します。<b>新しいレコードは作成しないため、何度実行しても重複しません。</b>
+      </div>
+      <form id="backfillForm" data-endpoint="/api/admin/import/backfill">
+        <div class="form-group">
+          <input type="file" id="backfillFileInput" accept=".xlsx" required />
+        </div>
+        <button type="submit" class="btn btn-secondary" id="backfillSubmitBtn">補完を実行</button>
+      </form>
+      <div class="progress-msg" id="backfillProgress">処理中です…</div>
+      <div id="backfillResult" class="result-box" hidden></div>
+    </div>
   </div>
 
   <script>
@@ -40,12 +58,18 @@
     })();
 
     function renderSummary(data) {
-      // ワーカースレッド起動直後は summary がまだ null（最初の進捗報告前）のことがある。
-      const s = data.summary || {
-        companiesImported: 0, companiesTotal: 0, workersImported: 0, workersTotal: 0,
-        workersSkippedOtherOrg: 0, sendingOrgsCreated: 0, registrationsCreated: 0,
-        applicationCasesCreated: 0, auditRecordsCreated: 0, errors: [],
-      };
+      const s = data.summary;
+      if (!s || data.mode === 'backfill' || 'companiesMatched' in (s || {})) {
+        const b = s || {
+          companiesMatched: 0, companiesNotFound: 0, workersMatched: 0, workersNotFound: 0,
+          workersAmbiguous: 0, errors: [],
+        };
+        return (
+          `受入企業: ${b.companiesMatched}件 補完（未一致 ${b.companiesNotFound}件）\n` +
+          `対象者: ${b.workersMatched}件 補完（未一致 ${b.workersNotFound}件、同姓同名で判別不能 ${b.workersAmbiguous || 0}件）\n` +
+          (b.errors.length ? `\nエラー:\n${b.errors.join('\n')}` : '')
+        );
+      }
       return (
         `受入企業: ${s.companiesImported} / ${s.companiesTotal}件\n` +
         `対象者: ${s.workersImported} / ${s.workersTotal}件\n` +
@@ -58,11 +82,11 @@
       );
     }
 
-    async function pollStatus() {
-      const resultBox = document.getElementById('result');
-      const progress = document.getElementById('progress');
-      const submitBtn = document.getElementById('submitBtn');
+    function summaryHasErrors(data) {
+      return !!(data.summary && data.summary.errors && data.summary.errors.length);
+    }
 
+    async function pollStatus(resultBox, progress, submitBtn) {
       try {
         const res = await fetch('/api/admin/import/status');
         const data = await res.json();
@@ -71,7 +95,7 @@
           resultBox.hidden = false;
           resultBox.classList.remove('error');
           resultBox.textContent = '処理中…\n' + renderSummary(data);
-          setTimeout(pollStatus, 2000);
+          setTimeout(() => pollStatus(resultBox, progress, submitBtn), 2000);
           return;
         }
 
@@ -86,50 +110,56 @@
         }
 
         resultBox.classList.remove('error');
-        resultBox.textContent = renderSummary(data) + ((data.summary && data.summary.errors.length) ? '' : '\nエラーなし');
+        resultBox.textContent = renderSummary(data) + (summaryHasErrors(data) ? '' : '\nエラーなし');
       } catch (err) {
         // ポーリング自体の通信エラーはリトライし続ける（無限に沈黙して固まるのを防ぐ）。
         resultBox.hidden = false;
         resultBox.textContent = '処理中…（通信エラーが発生しましたが再試行します: ' + err.message + '）';
-        setTimeout(pollStatus, 3000);
+        setTimeout(() => pollStatus(resultBox, progress, submitBtn), 3000);
       }
     }
 
-    document.getElementById('importForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fileInput = document.getElementById('fileInput');
-      const resultBox = document.getElementById('result');
-      const progress = document.getElementById('progress');
-      const submitBtn = document.getElementById('submitBtn');
-      if (!fileInput.files.length) return;
+    function wireForm(formId, fileInputId, resultId, progressId, submitId) {
+      const form = document.getElementById(formId);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById(fileInputId);
+        const resultBox = document.getElementById(resultId);
+        const progress = document.getElementById(progressId);
+        const submitBtn = document.getElementById(submitId);
+        if (!fileInput.files.length) return;
 
-      resultBox.hidden = true;
-      progress.style.display = 'block';
-      submitBtn.disabled = true;
+        resultBox.hidden = true;
+        progress.style.display = 'block';
+        submitBtn.disabled = true;
 
-      const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
 
-      try {
-        const res = await fetch('/api/admin/import/excel', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (!res.ok) {
+        try {
+          const res = await fetch(form.dataset.endpoint, { method: 'POST', body: formData });
+          const data = await res.json();
+          if (!res.ok) {
+            progress.style.display = 'none';
+            submitBtn.disabled = false;
+            resultBox.hidden = false;
+            resultBox.classList.add('error');
+            resultBox.textContent = data.error || 'エラーが発生しました。';
+            return;
+          }
+          setTimeout(() => pollStatus(resultBox, progress, submitBtn), 1000);
+        } catch (err) {
           progress.style.display = 'none';
           submitBtn.disabled = false;
           resultBox.hidden = false;
           resultBox.classList.add('error');
-          resultBox.textContent = data.error || 'エラーが発生しました。';
-          return;
+          resultBox.textContent = '通信エラーが発生しました: ' + err.message;
         }
-        setTimeout(pollStatus, 1000);
-      } catch (err) {
-        progress.style.display = 'none';
-        submitBtn.disabled = false;
-        resultBox.hidden = false;
-        resultBox.classList.add('error');
-        resultBox.textContent = '通信エラーが発生しました: ' + err.message;
-      }
-    });
+      });
+    }
+
+    wireForm('importForm', 'importFileInput', 'importResult', 'importProgress', 'importSubmitBtn');
+    wireForm('backfillForm', 'backfillFileInput', 'backfillResult', 'backfillProgress', 'backfillSubmitBtn');
   </script>
 </body>
 </html>

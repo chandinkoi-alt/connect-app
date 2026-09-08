@@ -7,8 +7,12 @@ const LEAD_STAGES = ['新規リード', '商談中', '条件交渉', '契約締�
 const YES_NO_UNKNOWN = ['適合', '不適合', '未確認'];
 const LOCK_OPTIONS = ['有', '無', '未確認'];
 
+const STATUS_OPTIONS = ['lead', 'active', 'withdrawn'];
+
 function buildRecord(body, existing = {}) {
+  const status = body.status || existing.status || 'lead';
   return {
+    companyNo: existing.companyNo ?? null,
     name: (body.name || '').trim(),
     industry: (body.industry || '').trim(),
     address: (body.address || '').trim(),
@@ -28,12 +32,13 @@ function buildRecord(body, existing = {}) {
     dormitoryHasValuablesStorage: body.dormitoryHasValuablesStorage || '',
     dormitoryInfo: (body.dormitoryInfo || '').trim(),
     notes: (body.notes || '').trim(),
-    status: body.status || existing.status || 'lead',
-    leadStage: body.status === 'active' ? null : body.leadStage || existing.leadStage || LEAD_STAGES[0],
+    status,
+    leadStage: status === 'lead' ? body.leadStage || existing.leadStage || LEAD_STAGES[0] : null,
   };
 }
 
 router.get('/lead-stages', (req, res) => res.json(LEAD_STAGES));
+router.get('/status-options', (req, res) => res.json(STATUS_OPTIONS));
 router.get('/dormitory-options', (req, res) => res.json({ roomSizeOptions: YES_NO_UNKNOWN, lockOptions: LOCK_OPTIONS }));
 
 router.get('/', async (req, res) => {
@@ -84,6 +89,17 @@ router.post('/:id/convert', async (req, res) => {
   if (!existing) return res.status(404).json({ error: '企業が見つかりません。' });
   const record = buildRecord({ ...existing, status: 'active' }, existing);
   res.json(await hostCompanies.update(id, record));
+});
+
+// 在籍状態（受入中／退会）の切替のみを行う
+router.put('/:id/status', async (req, res) => {
+  const id = Number(req.params.id);
+  const existing = await hostCompanies.get(id);
+  if (!existing) return res.status(404).json({ error: '企業が見つかりません。' });
+  if (!['active', 'withdrawn'].includes(req.body.status)) {
+    return res.status(400).json({ errors: ['状態を正しく選択してください。'] });
+  }
+  res.json(await hostCompanies.update(id, buildRecord({ ...existing, status: req.body.status }, existing)));
 });
 
 router.delete('/:id', async (req, res) => {
