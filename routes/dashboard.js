@@ -7,7 +7,20 @@ const router = express.Router();
 async function buildTasks() {
   const tasks = [];
 
-  const allWorkers = await workers.list();
+  // データ量が多くなると 1件ずつ .get() で問い合わせるのは非常に遅くなる
+  // （Tursoはリモート通信のため1回ごとに数十〜数百msかかる）。
+  // 必要なテーブルを最初に一括取得し、Mapで引けるようにしておく。
+  const [allWorkers, allCompanies, allCases, allVisits, allCompanyRegs, allWorkerRegs] = await Promise.all([
+    workers.list(),
+    hostCompanies.list(),
+    applicationCases.list(),
+    visitsAudits.list(),
+    companyRegistrations.list(),
+    workerRegistrations.list(),
+  ]);
+  const workerById = new Map(allWorkers.map((w) => [w.id, w]));
+  const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+
   for (const w of allWorkers) {
     const urgency = getUrgency(getDaysUntil(w.visaExpiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
@@ -23,12 +36,11 @@ async function buildTasks() {
     }
   }
 
-  const allCases = await applicationCases.list();
   for (const c of allCases) {
     if (!c.dueDate || c.status === '認定済み') continue;
     const urgency = getUrgency(getDaysUntil(c.dueDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
-      const worker = await workers.get(c.workerId);
+      const worker = workerById.get(c.workerId);
       tasks.push({
         id: `case-due-${c.id}`,
         category: '認定申請 提出期限',
@@ -41,13 +53,12 @@ async function buildTasks() {
     }
   }
 
-  const allVisits = await visitsAudits.list();
   for (const v of allVisits) {
     if (v.completedDate) continue;
     const urgency = getUrgency(getDaysUntil(v.scheduledDate), 14);
     if (urgency.level === 'expired' || urgency.level === 'warning') {
-      const worker = v.workerId ? await workers.get(v.workerId) : null;
-      const company = v.hostCompanyId ? await hostCompanies.get(v.hostCompanyId) : null;
+      const worker = v.workerId ? workerById.get(v.workerId) : null;
+      const company = v.hostCompanyId ? companyById.get(v.hostCompanyId) : null;
       tasks.push({
         id: `visit-${v.id}`,
         category: v.type,
@@ -60,12 +71,11 @@ async function buildTasks() {
     }
   }
 
-  const allCompanyRegs = await companyRegistrations.list();
   for (const r of allCompanyRegs) {
     if (!r.expiryDate) continue;
     const urgency = getUrgency(getDaysUntil(r.expiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
-      const company = await hostCompanies.get(r.hostCompanyId);
+      const company = companyById.get(r.hostCompanyId);
       tasks.push({
         id: `company-reg-${r.id}`,
         category: '企業 登録・許認可',
@@ -78,12 +88,11 @@ async function buildTasks() {
     }
   }
 
-  const allWorkerRegs = await workerRegistrations.list();
   for (const r of allWorkerRegs) {
     if (!r.expiryDate) continue;
     const urgency = getUrgency(getDaysUntil(r.expiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
-      const worker = await workers.get(r.workerId);
+      const worker = workerById.get(r.workerId);
       tasks.push({
         id: `worker-reg-${r.id}`,
         category: '対象者 登録・保険',
@@ -101,11 +110,14 @@ async function buildTasks() {
 }
 
 router.get('/stats', async (req, res) => {
-  const allWorkers = await workers.list();
-  const allCompanies = await hostCompanies.list();
-  const allCases = await applicationCases.list();
+  const [allWorkers, allCompanies, allCases, tasks] = await Promise.all([
+    workers.list(),
+    hostCompanies.list(),
+    applicationCases.list(),
+    buildTasks(),
+  ]);
 
-  const urgentTasks = (await buildTasks()).filter((t) => t.level === 'expired' || t.level === 'warning');
+  const urgentTasks = tasks.filter((t) => t.level === 'expired' || t.level === 'warning');
 
   res.json({
     activeWorkers: allWorkers.length,
