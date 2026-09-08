@@ -34,14 +34,6 @@ async function checkAuthAndBoot() {
     window.location.href = '/login.html';
     return;
   }
-  const user = await res.json();
-
-  const displayName = user.name || user.username;
-  const userAvatar = document.getElementById('userAvatar');
-  if (userAvatar) {
-    userAvatar.textContent = displayName.trim().charAt(0).toUpperCase();
-    userAvatar.title = displayName;
-  }
 
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {

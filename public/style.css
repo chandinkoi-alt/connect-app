@@ -82,8 +82,8 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 24px 18px 20px;
+  gap: 4px;
+  padding: 16px 18px 12px;
   text-align: center;
 }
 
@@ -115,7 +115,7 @@ select {
   border: none;
   background: none;
   color: var(--color-sidebar-text);
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
@@ -147,12 +147,12 @@ select {
 }
 
 .sidebar-footer {
-  padding: 14px;
+  padding: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .org-chip {
-  padding: 16px 14px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -160,56 +160,56 @@ select {
 }
 
 .org-name {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #f8fafc;
   font-family: var(--font-jp);
-  line-height: 1.4;
+  line-height: 1.3;
   letter-spacing: 0.01em;
 }
 
 .org-role {
   display: inline-block;
-  margin-top: 7px;
-  padding: 3px 10px;
+  margin-top: 5px;
+  padding: 2px 9px;
   border-radius: 999px;
   background: rgba(99, 102, 241, 0.18);
   color: #a5b4fc;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
   font-family: var(--font-jp);
   letter-spacing: 0.02em;
 }
 
 .org-license-list {
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: 9px;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 6px;
   text-align: left;
 }
 
 .org-license {
   font-family: var(--font-jp);
-  line-height: 1.5;
+  line-height: 1.3;
 }
 
 .org-license-label {
   display: block;
-  font-size: 10px;
+  font-size: 9.5px;
   color: #64748b;
   letter-spacing: 0.02em;
 }
 
 .org-license-value {
   display: block;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #e2e8f0;
   letter-spacing: 0.02em;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .sidebar-logout-btn {
@@ -218,8 +218,8 @@ select {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  margin-top: 12px;
-  padding: 10px 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
@@ -268,30 +268,6 @@ select {
   font-weight: 700;
   font-family: var(--font-jp);
   color: var(--color-text);
-}
-
-.topbar-user {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.user-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13.5px;
-  font-weight: 700;
-  font-family: var(--font-jp);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
-  cursor: default;
-  flex-shrink: 0;
 }
 
 main#tabContent {
