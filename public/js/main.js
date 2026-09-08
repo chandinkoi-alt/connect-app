@@ -53,8 +53,12 @@ async function checkAuthAndBoot() {
   }
 
   Modal.init();
+  ConfirmDialog.init();
   const initial = (window.location.hash || '#dashboard').replace('#', '');
   goToTab(TABS[initial] ? initial : 'dashboard');
+
+  const bootOverlay = document.getElementById('bootOverlay');
+  if (bootOverlay) bootOverlay.hidden = true;
 }
 
 function openAddAccountModal() {

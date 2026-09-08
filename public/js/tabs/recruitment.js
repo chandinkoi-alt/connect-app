@@ -64,7 +64,7 @@ const TabRecruitment = {
     });
     board.querySelectorAll('button[data-convert-id]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        if (!confirm('この企業を正式な実習実施者として登録しますか？')) return;
+        if (!(await ConfirmDialog.show('この企業を正式な実習実施者として登録しますか？', { okLabel: '登録する', danger: false }))) return;
         await api.post(`/api/host-companies/${btn.dataset.convertId}/convert`, {});
         this.activeCompanies = await api.get('/api/host-companies?status=active');
         await this.loadLeads();

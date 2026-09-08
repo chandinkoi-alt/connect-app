@@ -22,12 +22,12 @@ const TabWorkers = {
           <input type="text" id="searchInput" placeholder="氏名・企業・国籍で検索" />
           <select id="filterStatusType"><option value="">すべての制度区分</option></select>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap-freeze">
           <table>
             <thead>
               <tr><th>No.</th><th>氏名</th><th>制度区分</th><th>在留資格</th><th>受入企業</th><th>在留期限</th><th>ステータス</th><th>状態</th><th></th></tr>
             </thead>
-            <tbody id="workerTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
+            <tbody id="workerTableBody">${loadingRowHtml(9)}</tbody>
           </table>
         </div>
       </section>
@@ -291,6 +291,7 @@ const TabWorkers = {
 
     document.querySelectorAll('button[data-action="delete-reg"]').forEach((btn) => {
       btn.addEventListener('click', async () => {
+        if (!(await ConfirmDialog.show('この登録項目を削除しますか？'))) return;
         await api.del(`/api/workers/${workerId}/registrations/${btn.dataset.id}`);
         const regs = await api.get(`/api/workers/${workerId}/registrations`);
         document.getElementById('workerRegsList').innerHTML = this.renderRegistrations(regs);
@@ -509,7 +510,7 @@ const TabWorkers = {
   },
 
   async remove(id) {
-    if (!confirm('この対象者を削除しますか？')) return;
+    if (!(await ConfirmDialog.show('この対象者を削除しますか？\nこの操作は取り消せません。'))) return;
     await api.del(`/api/workers/${id}`);
     await this.loadStats();
     await this.load();

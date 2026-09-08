@@ -520,7 +520,7 @@ select:focus {
   /* 列数の多い表（人材一覧・受入企業一覧など）は、横スクロールバーが表全体の下端
      （行数が多いとページを最後までスクロールしないと出てこない）ではなく、常に
      画面内で操作できるよう、表自体の高さを制限してその中でスクロールさせる。 */
-  max-height: clamp(320px, calc(100vh - 320px), 640px);
+  max-height: clamp(400px, calc(100vh - 260px), 900px);
   overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -624,6 +624,17 @@ tbody tr:last-child td {
   font-size: 13px;
   padding: 10px 0;
   font-family: var(--font-jp);
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--color-text-subtle);
+  padding: 30px 10px;
+  font-family: var(--font-jp);
+  white-space: normal;
 }
 
 .badge {
@@ -1035,4 +1046,108 @@ tbody tr.row-dimmed:hover {
 .modal-body {
   padding: 22px;
   overflow-y: auto;
+}
+
+/* ---------- Confirm dialog（削除確認） ---------- */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+.confirm-overlay[hidden] {
+  display: none;
+}
+
+.confirm-box {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 360px;
+  padding: 26px 24px 20px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.confirm-message {
+  font-size: 13.5px;
+  color: var(--color-text);
+  font-family: var(--font-jp);
+  line-height: 1.6;
+  margin-bottom: 20px;
+  white-space: pre-line;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.confirm-actions .btn {
+  flex: 1;
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+/* ---------- Spinner / 起動時オーバーレイ ---------- */
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(79, 70, 229, 0.18);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinner-lg {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+.spinner-light {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.boot-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  transition: opacity 0.15s ease-out;
+}
+
+.boot-overlay[hidden] {
+  display: none;
 }

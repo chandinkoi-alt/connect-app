@@ -20,7 +20,7 @@ const TabSendingOrgs = {
                 <th>在籍者数（内訳）</th><th>覚書(MOU)</th><th></th>
               </tr>
             </thead>
-            <tbody id="orgTableBody"><tr><td colspan="8">読み込み中...</td></tr></tbody>
+            <tbody id="orgTableBody">${loadingRowHtml(8)}</tbody>
           </table>
         </div>
       </section>
@@ -239,7 +239,7 @@ const TabSendingOrgs = {
   },
 
   async remove(id) {
-    if (!confirm('この送出機関を削除しますか？')) return;
+    if (!(await ConfirmDialog.show('この送出機関を削除しますか？\nこの操作は取り消せません。'))) return;
     await api.del(`/api/sending-orgs/${id}`);
     await this.load();
   },

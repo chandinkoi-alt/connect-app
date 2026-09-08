@@ -55,6 +55,13 @@
     .alert-error[hidden] {
       display: none;
     }
+    .btn .spinner {
+      width: 14px;
+      height: 14px;
+      border-width: 2px;
+      vertical-align: -2px;
+      margin-right: 6px;
+    }
   </style>
 </head>
 <body>
@@ -117,48 +124,75 @@
       }
     }
 
+    function setButtonLoading(btn, loading, loadingText) {
+      if (loading) {
+        btn.dataset.originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner spinner-light"></span>${loadingText}`;
+      } else {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText || btn.textContent;
+      }
+    }
+
     document.getElementById('setupForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type=submit]');
+      setButtonLoading(btn, true, '作成中...');
       const body = {
         name: document.getElementById('setupName').value,
         username: document.getElementById('setupUsername').value,
         password: document.getElementById('setupPassword').value,
       };
-      const res = await fetch('/api/auth/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        const el = document.getElementById('setupErrors');
-        el.textContent = (data.errors || [data.error]).join(' / ');
-        el.hidden = false;
-        return;
+      try {
+        const res = await fetch('/api/auth/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const el = document.getElementById('setupErrors');
+          el.textContent = (data.errors || [data.error]).join(' / ');
+          el.hidden = false;
+          setButtonLoading(btn, false);
+          return;
+        }
+        window.location.href = '/';
+      } catch (err) {
+        setButtonLoading(btn, false);
+        throw err;
       }
-      window.location.href = '/';
     });
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = e.target.querySelector('button[type=submit]');
+      setButtonLoading(btn, true, 'ログイン中...');
       const body = {
         username: document.getElementById('loginUsername').value,
         password: document.getElementById('loginPassword').value,
       };
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      const el = document.getElementById('loginErrors');
-      if (!res.ok) {
-        el.textContent = (data.errors || [data.error]).join(' / ');
-        el.hidden = false;
-        return;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        const el = document.getElementById('loginErrors');
+        if (!res.ok) {
+          el.textContent = (data.errors || [data.error]).join(' / ');
+          el.hidden = false;
+          setButtonLoading(btn, false);
+          return;
+        }
+        el.hidden = true;
+        window.location.href = '/';
+      } catch (err) {
+        setButtonLoading(btn, false);
+        throw err;
       }
-      el.hidden = true;
-      window.location.href = '/';
     });
 
     init();

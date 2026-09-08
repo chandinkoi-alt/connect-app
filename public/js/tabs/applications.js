@@ -18,7 +18,7 @@ const TabApplications = {
             <thead>
               <tr><th>No.</th><th>対象者</th><th>受入企業</th><th>制度区分</th><th>段階</th><th>ステータス</th><th>提出期限</th><th>チェックリスト</th><th></th></tr>
             </thead>
-            <tbody id="caseTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
+            <tbody id="caseTableBody">${loadingRowHtml(9)}</tbody>
           </table>
         </div>
       </section>
@@ -166,7 +166,7 @@ const TabApplications = {
   },
 
   async remove(id) {
-    if (!confirm('この申請案件を削除しますか？')) return;
+    if (!(await ConfirmDialog.show('この申請案件を削除しますか？\nこの操作は取り消せません。'))) return;
     await api.del(`/api/application-cases/${id}`);
     await this.load();
   },

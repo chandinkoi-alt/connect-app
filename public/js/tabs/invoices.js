@@ -16,7 +16,7 @@ const TabInvoices = {
             <thead>
               <tr><th>請求月</th><th>受入企業</th><th>ステータス</th><th>件数</th><th>合計金額</th><th></th></tr>
             </thead>
-            <tbody id="invoiceTableBody"><tr><td colspan="6">読み込み中...</td></tr></tbody>
+            <tbody id="invoiceTableBody">${loadingRowHtml(6)}</tbody>
           </table>
         </div>
       </section>
@@ -64,7 +64,7 @@ const TabInvoices = {
     });
     tbody.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        if (!confirm('この請求書を削除しますか？')) return;
+        if (!(await ConfirmDialog.show('この請求書を削除しますか？\nこの操作は取り消せません。'))) return;
         await api.del(`/api/invoices/${btn.dataset.id}`);
         await this.load();
       });
@@ -213,6 +213,7 @@ const TabInvoices = {
 
     document.querySelectorAll('button[data-action="delete-item"]').forEach((btn) => {
       btn.addEventListener('click', async () => {
+        if (!(await ConfirmDialog.show('この明細行を削除しますか？'))) return;
         await api.del(`/api/invoices/${id}/items/${btn.dataset.id}`);
         await this.load();
         this.openDetail(id);
