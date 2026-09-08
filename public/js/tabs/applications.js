@@ -16,9 +16,9 @@ const TabApplications = {
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>対象者</th><th>受入企業</th><th>制度区分</th><th>段階</th><th>ステータス</th><th>提出期限</th><th>チェックリスト</th><th></th></tr>
+              <tr><th>No.</th><th>対象者</th><th>受入企業</th><th>制度区分</th><th>段階</th><th>ステータス</th><th>提出期限</th><th>チェックリスト</th><th></th></tr>
             </thead>
-            <tbody id="caseTableBody"><tr><td colspan="8">読み込み中...</td></tr></tbody>
+            <tbody id="caseTableBody"><tr><td colspan="9">読み込み中...</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -45,7 +45,7 @@ const TabApplications = {
     const cases = await api.get(`/api/application-cases?${params.toString()}`);
     const tbody = document.getElementById('caseTableBody');
     if (!cases.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">申請案件が登録されていません。</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">申請案件が登録されていません。</td></tr>';
       return;
     }
     tbody.innerHTML = cases
@@ -53,6 +53,7 @@ const TabApplications = {
         const done = c.checklist.filter((i) => i.done).length;
         return `
         <tr>
+          <td>${c.workerPersonalNo ?? '－'}</td>
           <td>${escapeHtml(c.workerName)}</td>
           <td>${escapeHtml(c.companyName)}</td>
           <td>${escapeHtml(c.statusType)}</td>
@@ -80,7 +81,7 @@ const TabApplications = {
   openEditForm(item) {
     const isEdit = !!item;
     const workerOptions = this.workers
-      .map((w) => `<option value="${w.id}" ${item && item.workerId === w.id ? 'selected' : ''}>${escapeHtml(w.name)}（${escapeHtml(w.companyName)}）</option>`)
+      .map((w) => `<option value="${w.id}" ${item && item.workerId === w.id ? 'selected' : ''}>${w.personalNo ? 'No.' + w.personalNo + ' ' : ''}${escapeHtml(w.name)}（${escapeHtml(w.companyName)}）</option>`)
       .join('');
     const statusTypeOptions = this.statusTypes
       .map((s) => `<option value="${s}" ${item && item.statusType === s ? 'selected' : ''}>${s}</option>`)

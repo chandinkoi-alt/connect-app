@@ -29,7 +29,7 @@ const TabCompanies = {
         <div class="filter-bar">
           <input type="text" id="companySearchInput" placeholder="企業名・業種・所在地で検索" />
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap-freeze">
           <table>
             <thead>
               <tr><th>No.</th><th>企業名</th><th>業種</th><th>所在地</th><th>担当者</th><th>電話番号</th><th>重要期限</th><th>状態</th><th></th></tr>
