@@ -1,6 +1,6 @@
 // ローカル/一回限りのテスト用CLI: node scripts/importExcel.js <path-to-xlsx>
 const fs = require('fs');
-const { importWorkbook } = require('../lib/excelImport');
+const { startImport } = require('../lib/excelImport');
 
 async function main() {
   const filePath = process.argv[2];
@@ -9,7 +9,8 @@ async function main() {
     process.exit(1);
   }
   const buffer = fs.readFileSync(filePath);
-  const summary = await importWorkbook(buffer);
+  const { summary, promise } = startImport(buffer);
+  await promise;
   console.log(JSON.stringify(summary, null, 2));
 }
 
