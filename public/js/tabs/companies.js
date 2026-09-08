@@ -62,7 +62,7 @@ const TabCompanies = {
         <td>${c.companyNo ?? '－'}</td>
         <td><a href="#" class="link-view" data-id="${c.id}">${escapeHtml(c.name)}</a></td>
         <td>${escapeHtml(c.industry)}</td>
-        <td>${escapeHtml(c.address)}</td>
+        <td class="cell-wrap">${escapeHtml(c.address)}</td>
         <td>${escapeHtml(c.contactPerson)}</td>
         <td>${escapeHtml(c.phone)}</td>
         <td><span class="badge ${c.status === 'withdrawn' ? 'badge-muted' : 'badge-ok'}">${c.status === 'withdrawn' ? '退会' : '受入中'}</span></td>
