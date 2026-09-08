@@ -62,11 +62,12 @@
       if (!s || data.mode === 'backfill' || 'companiesMatched' in (s || {})) {
         const b = s || {
           companiesMatched: 0, companiesNotFound: 0, workersMatched: 0, workersNotFound: 0,
-          workersAmbiguous: 0, errors: [],
+          workersAmbiguous: 0, sendingOrgsRenamed: 0, errors: [],
         };
         return (
           `受入企業: ${b.companiesMatched}件 補完（未一致 ${b.companiesNotFound}件）\n` +
           `対象者: ${b.workersMatched}件 補完（未一致 ${b.workersNotFound}件、同姓同名で判別不能 ${b.workersAmbiguous || 0}件）\n` +
+          `送出機関 正式名称に補完: ${b.sendingOrgsRenamed || 0}件\n` +
           (b.errors.length ? `\nエラー:\n${b.errors.join('\n')}` : '')
         );
       }

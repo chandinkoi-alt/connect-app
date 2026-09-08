@@ -99,7 +99,10 @@ const TabWorkers = {
         return `
         <tr class="${isInactive ? 'row-dimmed' : ''}">
           <td>${w.personalNo ?? '－'}</td>
-          <td><a href="#" class="link-view" data-id="${w.id}">${escapeHtml(w.name)}</a></td>
+          <td>
+            <a href="#" class="link-view" data-id="${w.id}">${escapeHtml(w.name)}</a>
+            ${w.nameKana ? `<div class="cell-sub">${escapeHtml(w.nameKana)}</div>` : ''}
+          </td>
           <td>${escapeHtml(w.statusType)}</td>
           <td>${escapeHtml(w.visaType)}</td>
           <td>${escapeHtml(w.companyName)}</td>

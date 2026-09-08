@@ -555,6 +555,23 @@ th {
   font-family: var(--font-jp);
 }
 
+/* 住所など長いテキストの列: 折り返して表示し、それ以降の列が
+   横スクロールで遠くまで離れてしまわないようにする。 */
+td.cell-wrap {
+  white-space: normal;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* 氏名の下にフリガナなど補足テキストを添える */
+.cell-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-jp);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
 tbody tr:hover {
   background: #fafafa;
 }
