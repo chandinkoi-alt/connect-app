@@ -36,8 +36,12 @@ async function checkAuthAndBoot() {
   }
   const user = await res.json();
 
-  const userNameEl = document.getElementById('currentUserName');
-  if (userNameEl) userNameEl.textContent = user.name || user.username;
+  const displayName = user.name || user.username;
+  const userAvatar = document.getElementById('userAvatar');
+  if (userAvatar) {
+    userAvatar.textContent = displayName.trim().charAt(0).toUpperCase();
+    userAvatar.title = displayName;
+  }
 
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
@@ -47,11 +51,6 @@ async function checkAuthAndBoot() {
     });
   }
 
-  const addAccountBtn = document.getElementById('addAccountBtn');
-  if (addAccountBtn) {
-    addAccountBtn.addEventListener('click', openAddAccountModal);
-  }
-
   Modal.init();
   ConfirmDialog.init();
   const initial = (window.location.hash || '#dashboard').replace('#', '');
@@ -59,39 +58,6 @@ async function checkAuthAndBoot() {
 
   const bootOverlay = document.getElementById('bootOverlay');
   if (bootOverlay) bootOverlay.hidden = true;
-}
-
-function openAddAccountModal() {
-  Modal.open(
-    '職員アカウントを追加',
-    `
-    <form id="addAccountForm">
-      <div class="form-group"><label>お名前</label><input type="text" id="f_name" placeholder="山田 太郎"></div>
-      <div class="form-group"><label>ユーザー名 *</label><input type="text" id="f_username" required minlength="3"></div>
-      <div class="form-group"><label>パスワード（6文字以上） *</label><input type="password" id="f_password" required minlength="6"></div>
-      <div id="formErrors" class="alert-error" hidden></div>
-      <button type="submit" class="btn btn-primary">アカウントを作成する</button>
-    </form>
-  `
-  );
-
-  document.getElementById('addAccountForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = {
-      name: document.getElementById('f_name').value,
-      username: document.getElementById('f_username').value,
-      password: document.getElementById('f_password').value,
-    };
-    try {
-      await api.post('/api/auth/register', body);
-      Modal.close();
-      alert('アカウントを作成しました。');
-    } catch (err) {
-      const el = document.getElementById('formErrors');
-      el.textContent = formatErrors(err);
-      el.hidden = false;
-    }
-  });
 }
 
 window.addEventListener('DOMContentLoaded', checkAuthAndBoot);
