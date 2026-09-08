@@ -630,6 +630,19 @@ tbody tr:last-child td {
   color: var(--color-text-subtle);
 }
 
+/* 受入企業一覧の「重要期限」列: 36協定・責任者講習・建設業許可を縦に並べて表示する */
+.deadline-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.badge-tiny {
+  padding: 2px 8px;
+  font-size: 10px;
+}
+
 /* 退会・帰国済み・失踪などの非アクティブ行を淡色化し、一覧の下部に固まるようにする */
 tbody tr.row-dimmed {
   opacity: 0.55;

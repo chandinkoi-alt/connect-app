@@ -1,7 +1,7 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
 const { workers, hostCompanies, sendingOrgs, applicationCases, visitsAudits, workerRegistrations } = require('../db');
-const { getDaysUntil, getUrgency } = require('../lib/dates');
+const { getWorkerVisaUrgency } = require('../lib/dates');
 const { SPECIAL_HEALTH_CHECK_TYPES, buildSpecialHealthChecks } = require('../lib/healthChecks');
 
 const router = express.Router();
@@ -18,7 +18,7 @@ function joinWorker(worker, companyById, sendingOrgById) {
     ...worker,
     companyName: company ? company.name : '',
     sendingOrgName: sendingOrg ? sendingOrg.name : '',
-    visaStatus: getUrgency(getDaysUntil(worker.visaExpiryDate)),
+    visaStatus: getWorkerVisaUrgency(worker),
     specialHealthChecks: JSON.parse(worker.specialHealthChecks || '[]'),
   };
 }
