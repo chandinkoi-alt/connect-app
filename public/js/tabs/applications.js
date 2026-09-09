@@ -14,6 +14,7 @@ const TabApplications = {
         <div class="filter-bar">
           <select id="filterStatus"><option value="">すべてのステータス</option></select>
         </div>
+        <div class="field-hint" style="margin-bottom:12px;">提出期限が近い・過ぎている案件ほど上に表示されます。提出期限が未入力の案件は、対象者の在留期限から算出した目安の期限（「（目安）」表示）で並び替えます。認定済みは末尾に表示されます。</div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -57,15 +58,26 @@ const TabApplications = {
     tbody.innerHTML = cases
       .map((c) => {
         const done = c.checklist.filter((i) => i.done).length;
+        const isDone = c.status === '認定済み';
+        // 提出期限：入力済みならそのまま、未入力なら在留期限から算出した
+        // 目安期限（isEstimated）を「（目安）」付きで示す。どちらも無ければ「－」。
+        let dueDateCell = '－';
+        if (isDone) {
+          dueDateCell = escapeHtml(c.dueDate) || '－';
+        } else if (c.dueDate) {
+          dueDateCell = `<span class="badge badge-${c.urgencyLevel}">${escapeHtml(c.dueDate)}</span>`;
+        } else if (c.isEstimated && c.effectiveDueDate) {
+          dueDateCell = `<span class="badge badge-${c.urgencyLevel}">${escapeHtml(c.effectiveDueDate)}（目安）</span>`;
+        }
         return `
-        <tr>
+        <tr class="${isDone ? 'row-dimmed' : ''}">
           <td>${c.workerPersonalNo ?? '－'}</td>
           <td>${escapeHtml(c.workerName)}</td>
           <td>${escapeHtml(c.companyName)}</td>
           <td>${escapeHtml(c.statusType)}</td>
           <td>${escapeHtml(c.stage) || '－'}</td>
           <td><span class="badge badge-${c.status === '認定済み' ? 'ok' : c.status === '追加書類対応中' ? 'warning' : 'unknown'}">${escapeHtml(c.status)}</span></td>
-          <td>${escapeHtml(c.dueDate) || '－'}</td>
+          <td>${dueDateCell}</td>
           <td>${done}/${c.checklist.length}</td>
           <td class="row-actions">
             <button class="link-btn link-edit" data-id="${c.id}" data-action="edit">開く</button>

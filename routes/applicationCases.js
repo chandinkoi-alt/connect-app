@@ -3,6 +3,7 @@ const { applicationCases, workers, hostCompanies, companyOfficers, sendingOrgs }
 const { buildChecklist } = require('../lib/checklists');
 const { generateNinteiPdf } = require('../lib/nintei-form/generatePdf');
 const { SUPERVISING_ORG } = require('../lib/certificationSettings');
+const { getDaysUntil, getUrgency, addMonths } = require('../lib/dates');
 
 const router = express.Router();
 
@@ -19,6 +20,24 @@ const PLAN_TYPES = [
   { code: 'F', label: 'F（第三号団体監理型）' },
 ];
 
+// 提出期限（dueDate）は手入力のため空欄のことが多い。空欄の場合は、
+// ダッシュボードの「認定申請 準備」と同じ基準（在留期限の5ヶ月前）を
+// 目安の期限として使い、一覧の優先順位づけ・色分けに利用する
+// （実際の提出期限として保存はしない。あくまで一覧の並び替え用）。
+function computeCaseUrgency(appCase, worker) {
+  let effectiveDueDate = appCase.dueDate || '';
+  let isEstimated = false;
+  if (!effectiveDueDate && worker && worker.visaExpiryDate) {
+    const target = addMonths(new Date(worker.visaExpiryDate), -5);
+    if (!Number.isNaN(target.getTime())) {
+      effectiveDueDate = target.toISOString().slice(0, 10);
+      isEstimated = true;
+    }
+  }
+  const urgency = getUrgency(getDaysUntil(effectiveDueDate));
+  return { effectiveDueDate, isEstimated, urgencyLevel: urgency.level, urgencyDays: urgency.days };
+}
+
 function joinCase(appCase, workerById, companyById) {
   const worker = appCase.workerId ? workerById.get(appCase.workerId) : null;
   const company = worker && worker.hostCompanyId ? companyById.get(worker.hostCompanyId) : null;
@@ -30,7 +49,20 @@ function joinCase(appCase, workerById, companyById) {
     workerPersonalNo: worker ? worker.personalNo : null,
     companyName: company ? company.name : '',
     companyNo: company ? company.companyNo : null,
+    ...computeCaseUrgency(appCase, worker),
   };
+}
+
+// 一覧の並び順：認定済み（対応不要）は末尾へ。それ以外は、期限（未入力なら
+// 在留期限からの目安期限）が近い・過ぎているものほど上に来るようにする。
+function compareCaseUrgency(a, b) {
+  const aDone = a.status === '認定済み';
+  const bDone = b.status === '認定済み';
+  if (aDone !== bDone) return aDone ? 1 : -1;
+  if (a.urgencyDays === null && b.urgencyDays === null) return 0;
+  if (a.urgencyDays === null) return 1;
+  if (b.urgencyDays === null) return -1;
+  return a.urgencyDays - b.urgencyDays;
 }
 
 async function withJoins(appCase) {
@@ -107,6 +139,7 @@ router.get('/', async (req, res) => {
       return worker && worker.hostCompanyId === Number(companyId);
     });
   }
+  result.sort(compareCaseUrgency);
   res.json(result);
 });
 
