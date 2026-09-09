@@ -87,10 +87,12 @@
 
     .issuer { text-align: left; width: 260px; }
     .issuer-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .issuer-brand img { height: 30px; width: auto; }
+    .issuer-brand img.logo { height: 30px; width: auto; }
     .issuer-brand .brand-jp { font-size: 12px; font-weight: 700; color: var(--muted); }
     .issuer-lines { font-size: 11px; color: var(--muted); line-height: 1.65; }
     .issuer-lines .reg-number { margin-top: 3px; font-variant-numeric: tabular-nums; }
+    /* 会社名のすぐ右、少し重なる位置に角印を配置する（実際の請求書の慣例に合わせる） */
+    .issuer-stamp { width: 42px; height: 42px; margin-left: -12px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; }
 
     .summary-row {
       display: flex;
@@ -296,8 +298,9 @@
           </div>
           <div class="issuer">
             <div class="issuer-brand">
-              <img src="assets/logo.png" alt="CONNECT" />
+              <img src="assets/logo.png" alt="CONNECT" class="logo" />
               <span class="brand-jp">${escapeHtml(issuer.name)}</span>
+              <img src="assets/stamp.png" alt="印" class="issuer-stamp" />
             </div>
             <div class="issuer-lines">
               〒${escapeHtml(issuer.postalCode)}<br />
