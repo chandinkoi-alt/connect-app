@@ -159,11 +159,13 @@ def fill(doc, data):
     row = lambda r: t.rows[r].cells
 
     # 1 申請者
+    # ②氏名又は名称・④代表者の氏名 は、セル内の1行目が（ふりがな）、
+    # 2行目が実際の名称・氏名の行（実物テンプレートを行ごとに検証済み）。
     set_cell_lines(row(0)[10], [str(company.get('companyNo') or '')])
-    set_cell_lines(row(2)[10], [company.get('name', '')])
+    set_cell_lines(row(2)[10], [company.get('nameKana', ''), company.get('name', '')])
     set_cell_lines(row(3)[10], [])
     fill_address_phone_cell(row(3)[10], company.get('address', ''), company.get('phone', ''))
-    set_cell_lines(row(5)[10], [company.get('representativeName', '')])
+    set_cell_lines(row(5)[10], ['', company.get('representativeName', '')])
     set_cell_lines(row(6)[10], [company.get('corporateNumber', '')])
     major = f'{company.get("industryMajorCode", "")}　{company.get("industryMajorName", "")}'.strip('　')
     minor = f'{company.get("industryMinorCode", "")}　{company.get("industryMinorName", "")}'.strip('　')
@@ -181,6 +183,8 @@ def fill(doc, data):
         set_cell_lines(row(r_name)[18], [f'〒　{postal or ""}', street])
 
     # 2 技能実習を行わせる事業所（受入企業の所在地をそのまま事業所として扱う）
+    # ①名称の（ふりがな）は1行上のrow21が別セルとして独立している。
+    set_cell_lines(row(21)[10], [company.get('nameKana', '')])
     set_cell_lines(row(22)[10], [company.get('name', '')])
     fill_address_phone_cell(row(23)[10], company.get('address', ''), company.get('phone', ''))
     set_cell_lines(row(24)[10], [company.get('trainingManagerName', '')])
