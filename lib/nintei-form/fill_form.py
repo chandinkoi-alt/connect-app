@@ -129,6 +129,51 @@ def mark_checkbox(text, marker, checked):
     return re.sub(rf'□(\s*{pattern})', rf'■\1', text, count=1) if checked else text
 
 
+def fill_page4(paragraphs, tables, company, ac):
+    """第4面 実習実施予定表（1号技能実習＝A・Dのみ）。
+    tables[4] は、技能実習の内容①〜⑦（各5行×1ブロック）＋月別時間数の表。
+    各ブロックの最終行（例：①なら行2〜6のうち行6）に、事業所・合計時間・
+    月別時間数が入る（実物テンプレートをマーカー文字で検証済み）。内容列
+    （col2）はブロック内の5行それぞれが独立した1行分の自由記述欄になっている。
+    実物様式は「開始月から終了月までを矢印で結び、矢印の上に時間数を書く」
+    という表現だが、矢印の描画までは行わず、開始月〜終了月の各列に
+    月あたり時間数の数字を書き込む形で簡略化している。
+    """
+    # 技能実習を行わせる事業所（①のみ。受入企業の情報をそのまま使う）
+    set_paragraph_text(
+        paragraphs[104],
+        f'事業所名　{company.get("name", "")}　　　　　　　　　所在地　{company.get("address", "")}',
+    )
+    sy, sm, sd = format_date_ymd(ac.get('trainingPeriodStart'))
+    ey, em, ed = format_date_ymd(ac.get('trainingPeriodEnd'))
+    set_paragraph_text(
+        paragraphs[107],
+        f'実習期間　　　{sy}年　{sm} 月　{sd}　日　～　　　{ey}年　{em} 月　{ed}　日',
+    )
+
+    t = tables[4]
+    row = lambda r: t.rows[r].cells
+    items = ac.get('trainingContentItems') or []
+    for i, it in enumerate(items[:7]):
+        base = 2 + i * 5
+        anchor = base + 4
+        content_lines = [it.get('content', ''), it.get('dutyType', ''), it.get('instructorInfo', '')]
+        for j, line in enumerate(content_lines):
+            set_cell_lines(row(base + j)[2], [line])
+        set_cell_lines(row(anchor)[3], [it.get('workplace') or company.get('name', '')])
+        set_cell_lines(row(anchor)[4], [str(it.get('totalHours') or '')])
+        start, end, hours = it.get('startMonth'), it.get('endMonth'), it.get('hoursPerMonth')
+        if start and end and hours:
+            for month in range(int(start), int(end) + 1):
+                if 1 <= month <= 12:
+                    set_cell_lines(row(anchor)[4 + month], [str(hours)])
+
+    t5 = tables[5]
+    row5 = lambda r: t5.rows[r].cells
+    set_cell_lines(row5(0)[1], [ac.get('trainingMaterials', '')])
+    set_cell_lines(row5(1)[1], [ac.get('trainingTools', '')])
+
+
 def fill(doc, data):
     company = data.get('company') or {}
     worker = data.get('worker') or {}
@@ -320,6 +365,12 @@ def fill(doc, data):
     lines = remarks_text.split('\n')
     lines[0] = ac.get('remarks', '') or ''
     set_cell_lines(row(74)[10], lines)
+
+    # ============================================================
+    # 第４面（実習実施予定表。1号＝A・Dのみ対象、tables[4]と[5]）
+    # ============================================================
+    if plan_type in ('A', 'D'):
+        fill_page4(paragraphs, tables, company, ac)
 
     # ============================================================
     # 第７面（欠格事由の確認チェック）

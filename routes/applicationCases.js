@@ -25,6 +25,7 @@ function joinCase(appCase, workerById, companyById) {
   return {
     ...appCase,
     checklist: JSON.parse(appCase.checklist || '[]'),
+    trainingContentItems: JSON.parse(appCase.trainingContentItems || '[]'),
     workerName: worker ? worker.name : '',
     workerPersonalNo: worker ? worker.personalNo : null,
     companyName: company ? company.name : '',
@@ -75,6 +76,12 @@ function buildRecord(body, existing = {}) {
     remarks: (body.remarks ?? existing.remarks ?? '').toString().trim(),
     hasDifficultyNotification: body.hasDifficultyNotification ?? existing.hasDifficultyNotification ?? '',
     planGuidanceStaffName: (body.planGuidanceStaffName ?? existing.planGuidanceStaffName ?? '').toString().trim(),
+    // 実習実施予定表（第4面、1号＝A・Dのみ）用
+    trainingMaterials: (body.trainingMaterials ?? existing.trainingMaterials ?? '').toString().trim(),
+    trainingTools: (body.trainingTools ?? existing.trainingTools ?? '').toString().trim(),
+    trainingContentItems: body.trainingContentItems
+      ? JSON.stringify(body.trainingContentItems)
+      : existing.trainingContentItems || '[]',
   };
 }
 
@@ -157,7 +164,7 @@ router.get('/:id/pdf', async (req, res) => {
     const pdfBuffer = await generateNinteiPdf({
       company,
       worker,
-      applicationCase: ac,
+      applicationCase: { ...ac, trainingContentItems: JSON.parse(ac.trainingContentItems || '[]') },
       officers,
       sendingOrg,
       supervisingOrg: SUPERVISING_ORG,
