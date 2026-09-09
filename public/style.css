@@ -1031,6 +1031,14 @@ tbody tr.row-dimmed:hover {
   width: auto;
 }
 
+.worker-checklist {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 10px;
+}
+
 /* ---------- Modal ---------- */
 
 .modal-overlay {

@@ -92,8 +92,15 @@ const TabApplications = {
     const selectableWorkers = this.workers.filter(
       (w) => w.statusType !== '特定技能' || (item && item.workerId === w.id)
     );
+    const workerLabel = (w) => `${w.personalNo ? 'No.' + w.personalNo + ' ' : ''}${escapeHtml(w.name)}（${escapeHtml(w.companyName)}）`;
     const workerOptions = selectableWorkers
-      .map((w) => `<option value="${w.id}" ${item && item.workerId === w.id ? 'selected' : ''}>${w.personalNo ? 'No.' + w.personalNo + ' ' : ''}${escapeHtml(w.name)}（${escapeHtml(w.companyName)}）</option>`)
+      .map((w) => `<option value="${w.id}" ${item && item.workerId === w.id ? 'selected' : ''}>${workerLabel(w)}</option>`)
+      .join('');
+    // 新規登録時は、同じ会社・同じ内容で複数の対象者に一括登録できるよう
+    // チェックボックスで複数選択できるようにする（編集時は対象者を後から
+    // 変更できないため、従来どおり1件のプルダウンのまま）。
+    const workerCheckboxesHtml = selectableWorkers
+      .map((w) => `<li><label><input type="checkbox" class="worker-checkbox" value="${w.id}"> ${workerLabel(w)}</label></li>`)
       .join('');
     const selectableStatusTypes = this.statusTypes.filter(
       (s) => s !== '特定技能' || (item && item.statusType === s)
@@ -176,7 +183,13 @@ const TabApplications = {
       isEdit ? '認定申請 編集' : '認定申請 新規登録',
       `
       <form id="caseForm">
-        <div class="form-group"><label>対象者 *</label><select id="f_workerId" required ${isEdit ? 'disabled' : ''}><option value="">選択してください</option>${workerOptions}</select></div>
+        ${isEdit
+          ? `<div class="form-group"><label>対象者 *</label><select id="f_workerId" required disabled><option value="">選択してください</option>${workerOptions}</select></div>`
+          : `<div class="form-group">
+               <label>対象者 * <span class="field-hint">同じ会社・同じ内容の申請案件を複数の対象者にまとめて登録できます（2名以上選択可）</span></label>
+               <ul class="checklist worker-checklist" id="workerCheckboxList">${workerCheckboxesHtml || '<li>対象者が登録されていません。</li>'}</ul>
+             </div>`
+        }
         <div class="form-row">
           <div class="form-group"><label>制度区分 *</label><select id="f_statusType" required><option value="">選択</option>${statusTypeOptions}</select></div>
           <div class="form-group"><label>段階</label><input id="f_stage" value="${item ? escapeHtml(item.stage) : ''}" placeholder="初回申請・更新申請 等"></div>
@@ -231,8 +244,21 @@ const TabApplications = {
     document.getElementById('caseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const val = (id) => document.getElementById(id).value;
-      const body = {
-        workerId: isEdit ? item.workerId : val('f_workerId'),
+
+      let workerIds;
+      if (isEdit) {
+        workerIds = [item.workerId];
+      } else {
+        workerIds = Array.from(document.querySelectorAll('.worker-checkbox:checked')).map((cb) => cb.value);
+        if (!workerIds.length) {
+          const el = document.getElementById('formErrors');
+          el.textContent = '対象者を1名以上選択してください。';
+          el.hidden = false;
+          return;
+        }
+      }
+
+      const baseBody = {
         statusType: val('f_statusType'),
         stage: val('f_stage'),
         status: val('f_status'),
@@ -261,13 +287,26 @@ const TabApplications = {
         remarks: val('f_remarks'),
       };
       try {
-        if (isEdit) await api.put(`/api/application-cases/${item.id}`, body);
-        else await api.post('/api/application-cases', body);
+        if (isEdit) {
+          await api.put(`/api/application-cases/${item.id}`, { ...baseBody, workerId: workerIds[0] });
+        } else {
+          // 複数選択されている場合は、同じ内容で対象者の数だけ順番に登録する。
+          // 途中で失敗した場合、それより前の分は既に登録済みのまま止め、
+          // どの対象者で失敗したかをエラーに含める（未登録分だけ選び直して再送できる）。
+          for (const workerId of workerIds) {
+            try {
+              await api.post('/api/application-cases', { ...baseBody, workerId });
+            } catch (err) {
+              const worker = selectableWorkers.find((w) => String(w.id) === String(workerId));
+              throw new Error(`${worker ? worker.name : workerId}: ${formatErrors(err)}`);
+            }
+          }
+        }
         Modal.close();
         await this.load();
       } catch (err) {
         const el = document.getElementById('formErrors');
-        el.textContent = formatErrors(err);
+        el.textContent = err.message || formatErrors(err);
         el.hidden = false;
       }
     });
