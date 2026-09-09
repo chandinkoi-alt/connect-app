@@ -164,6 +164,10 @@
           setButtonLoading(btn, false);
           return;
         }
+        // 成功直後にすぐ画面遷移すると、スピナーが描画される間もなく次の画面に
+        // 切り替わってしまい「回転していないように見える」ことがあるため、
+        // 遷移前に少しだけ待って、読み込み中であることが視覚的に伝わるようにする。
+        await new Promise((r) => setTimeout(r, 900));
         window.location.href = '/';
       } catch (err) {
         setButtonLoading(btn, false);
@@ -194,6 +198,10 @@
           return;
         }
         el.hidden = true;
+        // 成功直後にすぐ画面遷移すると、スピナーが描画される間もなく次の画面に
+        // 切り替わってしまい「回転していないように見える」ことがあるため、
+        // 遷移前に少しだけ待って、読み込み中であることが視覚的に伝わるようにする。
+        await new Promise((r) => setTimeout(r, 900));
         window.location.href = '/';
       } catch (err) {
         setButtonLoading(btn, false);
