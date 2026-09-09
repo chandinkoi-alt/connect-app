@@ -93,10 +93,10 @@
     .issuer-brand img.logo { height: 104px; width: auto; }
     .issuer-lines { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
     .issuer-lines .reg-number { margin-top: 3px; font-variant-numeric: tabular-nums; }
-    /* ロゴの「CONNECT」文字の右側に少し重なる位置に角印を配置する（実際の請求書の
-       慣例に合わせる）。下の住所欄に少しかぶっても問題ない、との指示のためサイズを
-       大きめにしている */
-    .issuer-stamp { width: 96px; height: 96px; margin-left: -72px; margin-top: 26px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; position: relative; z-index: 2; }
+    /* 実際に使用している請求書Excel（実物）の座標を実測し、ロゴに対するサイズ・
+       位置の比率を100%再現している：ロゴ高さの約103%のサイズで、ロゴ幅の76%
+       地点あたりの右側に、ほぼロゴ上端に合わせて重ねて配置する */
+    .issuer-stamp { width: 107px; height: 107px; margin-left: -79px; margin-top: 2px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; position: relative; z-index: 2; }
 
     .summary-row {
       display: flex;
