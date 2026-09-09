@@ -18,6 +18,11 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 // 通常どおり応答し続けられる。
 let currentJob = null;
 
+const JOB_LABELS = {
+  import: '①Excel一括インポート',
+  backfill: '②番号・退会/失踪状態の補完',
+};
+
 function startJob(mode, buffer) {
   currentJob = { status: 'running', mode, summary: null, error: null };
 
@@ -55,7 +60,8 @@ function startJob(mode, buffer) {
 router.post('/excel', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'ファイルが選択されていません。' });
   if (currentJob && currentJob.status === 'running') {
-    return res.status(409).json({ error: '別の処理が実行中です。完了までお待ちください。' });
+    const runningLabel = JOB_LABELS[currentJob.mode] || currentJob.mode;
+    return res.status(409).json({ error: `${runningLabel}が実行中です。完了までお待ちください。` });
   }
   startJob('import', req.file.buffer);
   res.json({ status: 'started' });
@@ -66,7 +72,8 @@ router.post('/excel', upload.single('file'), (req, res) => {
 router.post('/backfill', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'ファイルが選択されていません。' });
   if (currentJob && currentJob.status === 'running') {
-    return res.status(409).json({ error: '別の処理が実行中です。完了までお待ちください。' });
+    const runningLabel = JOB_LABELS[currentJob.mode] || currentJob.mode;
+    return res.status(409).json({ error: `${runningLabel}が実行中です。完了までお待ちください。` });
   }
   startJob('backfill', req.file.buffer);
   res.json({ status: 'started' });
