@@ -41,9 +41,15 @@ async function buildTasks() {
   const workerById = new Map(allWorkers.map((w) => [w.id, w]));
   const companyById = new Map(allCompanies.map((c) => [c.id, c]));
 
+  // 退会済み（status === 'withdrawn'）の企業と、その企業に所属する対象者は
+  // もう対応不要なため、ダッシュボードの集計・タスク一覧からは除外する。
+  const withdrawnCompanyIds = new Set(allCompanies.filter((c) => c.status === 'withdrawn').map((c) => c.id));
+  const activeWorkers = allWorkers.filter((w) => !w.hostCompanyId || !withdrawnCompanyIds.has(w.hostCompanyId));
+  const activeWorkerIds = new Set(activeWorkers.map((w) => w.id));
+
   // 在留期限の警告は就労中の対象者のみ（準備中・一時帰国中・帰国済み・失踪は対応不要）。
   // 4ヶ月を切ったら警告、3ヶ月を切ったら危険（lib/dates.js の getWorkerVisaUrgency を参照）。
-  for (const w of allWorkers) {
+  for (const w of activeWorkers) {
     const urgency = getWorkerVisaUrgency(w);
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       tasks.push({
@@ -62,7 +68,7 @@ async function buildTasks() {
   // 早めに書類準備を始めるよう知らせる。既に案件（認定済み以外）が作成済みなら
   // 対応が始まっているとみなし、重複して表示しない。
   const workersWithOpenCase = new Set(allCases.filter((c) => c.status !== '認定済み').map((c) => c.workerId));
-  for (const w of allWorkers) {
+  for (const w of activeWorkers) {
     if (w.currentStage !== '就労中' || workersWithOpenCase.has(w.id)) continue;
     if (!isWithinMonths(w.visaExpiryDate, 5)) continue;
     const days = getDaysUntil(w.visaExpiryDate);
@@ -78,7 +84,7 @@ async function buildTasks() {
   }
 
   for (const c of allCases) {
-    if (!c.dueDate || c.status === '認定済み') continue;
+    if (!c.dueDate || c.status === '認定済み' || !activeWorkerIds.has(c.workerId)) continue;
     const urgency = getUrgency(getDaysUntil(c.dueDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       const worker = workerById.get(c.workerId);
@@ -96,6 +102,8 @@ async function buildTasks() {
 
   for (const v of allVisits) {
     if (v.completedDate) continue;
+    if (v.hostCompanyId && withdrawnCompanyIds.has(v.hostCompanyId)) continue;
+    if (v.workerId && !activeWorkerIds.has(v.workerId)) continue;
     const urgency = getUrgency(getDaysUntil(v.scheduledDate), 14);
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       const worker = v.workerId ? workerById.get(v.workerId) : null;
@@ -113,6 +121,7 @@ async function buildTasks() {
   }
 
   for (const r of allCompanyRegs) {
+    if (withdrawnCompanyIds.has(r.hostCompanyId)) continue;
     const expiryDate = getEffectiveExpiryDate(r);
     if (!expiryDate) continue;
     const urgency = getUrgency(getDaysUntil(expiryDate));
@@ -131,7 +140,7 @@ async function buildTasks() {
   }
 
   for (const r of allWorkerRegs) {
-    if (!r.expiryDate) continue;
+    if (!r.expiryDate || !activeWorkerIds.has(r.workerId)) continue;
     const urgency = getUrgency(getDaysUntil(r.expiryDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       const worker = workerById.get(r.workerId);
@@ -177,10 +186,15 @@ router.get('/stats', async (req, res) => {
 
   const urgentTasks = tasks.filter((t) => t.level === 'expired' || t.level === 'warning');
 
+  // 退会済み企業に所属する対象者・その申請案件は「在籍中」「処理中」の集計から除く。
+  const withdrawnCompanyIds = new Set(allCompanies.filter((c) => c.status === 'withdrawn').map((c) => c.id));
+  const activeWorkers = allWorkers.filter((w) => !w.hostCompanyId || !withdrawnCompanyIds.has(w.hostCompanyId));
+  const activeWorkerIds = new Set(activeWorkers.map((w) => w.id));
+
   res.json({
-    activeWorkers: allWorkers.length,
+    activeWorkers: activeWorkers.length,
     hostCompanies: allCompanies.filter((c) => c.status === 'active').length,
-    processingCases: allCases.filter((c) => c.status !== '認定済み').length,
+    processingCases: allCases.filter((c) => c.status !== '認定済み' && activeWorkerIds.has(c.workerId)).length,
     urgentCount: urgentTasks.filter((t) => t.level === 'expired').length,
     warningCount: urgentTasks.filter((t) => t.level === 'warning').length,
   });
