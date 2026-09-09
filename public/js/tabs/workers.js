@@ -405,7 +405,11 @@ const TabWorkers = {
 
         <h4 class="section-title">労働条件</h4>
         <div class="form-row">
+          <div class="form-group"><label>賃金形態</label><select id="f_wageType"><option value="">選択</option>${['月給', '日給', '時給'].map((o) => `<option value="${o}" ${worker && worker.wageType === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
           <div class="form-group"><label>基本賃金（円）</label><input id="f_baseSalary" type="number" value="${worker && worker.baseSalary ? worker.baseSalary : ''}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>講習手当（円）</label><input id="f_trainingAllowance" type="number" value="${worker && worker.trainingAllowance ? worker.trainingAllowance : ''}"></div>
           <div class="form-group"><label>給料支払日</label><input id="f_payDate" placeholder="毎月25日" value="${worker ? escapeHtml(worker.payDate) : ''}"></div>
         </div>
         <div class="form-row">
@@ -413,14 +417,29 @@ const TabWorkers = {
           <div class="form-group"><label>終業時刻</label><input id="f_workEndTime" placeholder="17:00" value="${worker ? escapeHtml(worker.workEndTime) : ''}"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>休日</label><input id="f_holidays" placeholder="土日祝" value="${worker ? escapeHtml(worker.holidays) : ''}"></div>
-          <div class="form-group"><label>労働時間（補足）</label><input id="f_workingHours" value="${worker ? escapeHtml(worker.workingHours) : ''}"></div>
+          <div class="form-group"><label>休憩開始</label><input id="f_breakStartTime" placeholder="12:00" value="${worker ? escapeHtml(worker.breakStartTime) : ''}"></div>
+          <div class="form-group"><label>休憩終了</label><input id="f_breakEndTime" placeholder="13:00" value="${worker ? escapeHtml(worker.breakEndTime) : ''}"></div>
         </div>
+        <div class="form-row">
+          <div class="form-group"><label>年間所定労働時間</label><input id="f_annualWorkingHours" type="number" value="${worker && worker.annualWorkingHours ? worker.annualWorkingHours : ''}"></div>
+          <div class="form-group"><label>週平均所定労働時間</label><input id="f_weeklyAverageWorkingHours" placeholder="例: 40時間" value="${worker ? escapeHtml(worker.weeklyAverageWorkingHours) : ''}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>休日</label><input id="f_holidays" placeholder="土日祝" value="${worker ? escapeHtml(worker.holidays) : ''}"></div>
+          <div class="form-group"><label>休暇</label><input id="f_leaveInfo" placeholder="年次有給休暇等" value="${worker ? escapeHtml(worker.leaveInfo) : ''}"></div>
+        </div>
+        <div class="form-group"><label>労働時間（補足）</label><input id="f_workingHours" value="${worker ? escapeHtml(worker.workingHours) : ''}"></div>
         <div class="form-row">
           <div class="form-group"><label>割増賃金率</label><input id="f_overtimeRate" placeholder="25%" value="${worker ? escapeHtml(worker.overtimeRate) : ''}"></div>
           <div class="form-group"><label>手当</label><input id="f_allowances" value="${worker ? escapeHtml(worker.allowances) : ''}"></div>
         </div>
         <div class="form-group"><label>控除</label><input id="f_deductions" value="${worker ? escapeHtml(worker.deductions) : ''}"></div>
+        <h5 style="margin:10px 0 6px;font-weight:600;color:#555;">技能実習生が定期に負担する費用（認定申請書用）</h5>
+        <div class="form-row">
+          <div class="form-group"><label>食費（円）</label><input id="f_mealFee" type="number" value="${worker && worker.mealFee ? worker.mealFee : ''}"></div>
+          <div class="form-group"><label>居住費（円）</label><input id="f_housingFeeDeduction" type="number" value="${worker && worker.housingFeeDeduction ? worker.housingFeeDeduction : ''}"></div>
+          <div class="form-group"><label>その他（円）</label><input id="f_otherFeeDeduction" type="number" value="${worker && worker.otherFeeDeduction ? worker.otherFeeDeduction : ''}"></div>
+        </div>
         <div class="form-group"><label>相談窓口</label><input id="f_consultationContact" value="${worker ? escapeHtml(worker.consultationContact) : ''}"></div>
         <div class="form-group"><label>保険加入状況</label><input id="f_insuranceStatus" value="${worker ? escapeHtml(worker.insuranceStatus) : ''}"></div>
         <div class="form-group"><label>宿舎情報</label><input id="f_dormitoryInfo" value="${worker ? escapeHtml(worker.dormitoryInfo) : ''}"></div>
@@ -469,10 +488,17 @@ const TabWorkers = {
         contractEndDate: val('f_contractEndDate'), educationWorkHistory: val('f_educationWorkHistory'),
         currentStage: val('f_currentStage'),
         tokuteiTrainingStatus: val('f_tokuteiTrainingStatus'), tokuteiTrainingDate: val('f_tokuteiTrainingDate'),
-        baseSalary: val('f_baseSalary') || null, payDate: val('f_payDate'),
-        workStartTime: val('f_workStartTime'), workEndTime: val('f_workEndTime'), holidays: val('f_holidays'),
+        wageType: val('f_wageType'), baseSalary: val('f_baseSalary') || null,
+        trainingAllowance: val('f_trainingAllowance') || null, payDate: val('f_payDate'),
+        workStartTime: val('f_workStartTime'), workEndTime: val('f_workEndTime'),
+        breakStartTime: val('f_breakStartTime'), breakEndTime: val('f_breakEndTime'),
+        annualWorkingHours: val('f_annualWorkingHours') || null,
+        weeklyAverageWorkingHours: val('f_weeklyAverageWorkingHours'),
+        holidays: val('f_holidays'), leaveInfo: val('f_leaveInfo'),
         workingHours: val('f_workingHours'),
         overtimeRate: val('f_overtimeRate'), allowances: val('f_allowances'), deductions: val('f_deductions'),
+        mealFee: val('f_mealFee') || null, housingFeeDeduction: val('f_housingFeeDeduction') || null,
+        otherFeeDeduction: val('f_otherFeeDeduction') || null,
         healthCheckDate: val('f_healthCheckDate'), specialHealthChecks,
         consultationContact: val('f_consultationContact'),
         insuranceStatus: val('f_insuranceStatus'), dormitoryInfo: val('f_dormitoryInfo'),
