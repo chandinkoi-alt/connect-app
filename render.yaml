@@ -1,9 +1,11 @@
 services:
   - type: web
     name: connect-app
-    env: node
-    buildCommand: npm install
-    startCommand: node server.js
+    # 技能実習計画認定申請書の実物様式PDF出力にLibreOffice（headless変換）と
+    # Python（python-docx）が必要なため、通常のNode buildpackではなくDockerで
+    # デプロイする（Dockerfile参照）。
+    env: docker
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: UNION_NAME
         value: コネクト協同組合
