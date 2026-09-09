@@ -1,6 +1,9 @@
 const express = require('express');
-const { applicationCases, workers, hostCompanies } = require('../db');
+const PDFDocument = require('pdfkit');
+const { applicationCases, workers, hostCompanies, companyOfficers, sendingOrgs } = require('../db');
 const { buildChecklist } = require('../lib/checklists');
+const { generateCertificationApplicationPdf } = require('../lib/certificationApplicationPdf');
+const { SUPERVISING_ORG } = require('../lib/certificationSettings');
 
 const router = express.Router();
 
@@ -136,6 +139,32 @@ router.delete('/:id', async (req, res) => {
   const deleted = await applicationCases.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '申請案件が見つかりません。' });
   res.json({ ok: true });
+});
+
+// 技能実習計画認定申請書（第1・2・7面）のPDFを出力する
+router.get('/:id/pdf', async (req, res) => {
+  const id = Number(req.params.id);
+  const ac = await applicationCases.get(id);
+  if (!ac) return res.status(404).json({ error: '申請案件が見つかりません。' });
+
+  const worker = ac.workerId ? await workers.get(ac.workerId) : null;
+  const company = worker && worker.hostCompanyId ? await hostCompanies.get(worker.hostCompanyId) : null;
+  const sendingOrg = worker && worker.sendingOrgId ? await sendingOrgs.get(worker.sendingOrgId) : null;
+  const officers = company ? await companyOfficers.listByCompany(company.id) : [];
+
+  const doc = new PDFDocument({ size: 'A4', margin: 0 });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename=nintei_shinsei_${id}.pdf`);
+  doc.pipe(res);
+  generateCertificationApplicationPdf(doc, {
+    company,
+    worker,
+    applicationCase: ac,
+    officers,
+    sendingOrg,
+    supervisingOrg: SUPERVISING_ORG,
+  });
+  doc.end();
 });
 
 module.exports = router;
