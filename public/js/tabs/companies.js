@@ -269,7 +269,7 @@ const TabCompanies = {
           <div class="form-group"><label>企業名 *</label><input id="f_name" required value="${company ? escapeHtml(company.name) : ''}"></div>
           <div class="form-group"><label>業種</label><input id="f_industry" value="${company ? escapeHtml(company.industry) : ''}"></div>
         </div>
-        <div class="form-group"><label>所在地</label><input id="f_address" value="${company ? escapeHtml(company.address) : ''}"></div>
+        <div class="form-group"><label>所在地</label><textarea id="f_address" rows="2" placeholder="本社と送付先など2件ある場合は改行で分けて入力できます">${company ? escapeHtml(company.address) : ''}</textarea></div>
         <div class="form-row">
           <div class="form-group"><label>担当者</label><input id="f_contactPerson" value="${company ? escapeHtml(company.contactPerson) : ''}"></div>
           <div class="form-group"><label>電話番号</label><input id="f_phone" value="${company ? escapeHtml(company.phone) : ''}"></div>
