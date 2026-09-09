@@ -180,7 +180,10 @@ const SCHEMA = `
     practicalHours INTEGER,
     remarks TEXT,
     hasDifficultyNotification TEXT,
-    planGuidanceStaffName TEXT
+    planGuidanceStaffName TEXT,
+    trainingMaterials TEXT,
+    trainingTools TEXT,
+    trainingContentItems TEXT
   );
 
   CREATE TABLE IF NOT EXISTS visits_audits (
@@ -276,7 +279,8 @@ const MIGRATION_COLUMNS = {
     ['priorStageGoalType', 'TEXT'], ['priorStageGoalDetail', 'TEXT'], ['priorApprovalNumber', 'TEXT'],
     ['trainingPeriodStart', 'TEXT'], ['trainingPeriodEnd', 'TEXT'], ['orientationHours', 'INTEGER'],
     ['practicalHours', 'INTEGER'], ['remarks', 'TEXT'], ['hasDifficultyNotification', 'TEXT'],
-    ['planGuidanceStaffName', 'TEXT'],
+    ['planGuidanceStaffName', 'TEXT'], ['trainingMaterials', 'TEXT'], ['trainingTools', 'TEXT'],
+    ['trainingContentItems', 'TEXT'],
   ],
   invoice_items: [
     ['taxCategory', 'TEXT'],
@@ -407,6 +411,7 @@ const applicationCases = makeRepo('application_cases', [
   'jobCategoryFreeText', 'trainingGoalType', 'trainingGoalDetail', 'priorStageGoalType', 'priorStageGoalDetail',
   'priorApprovalNumber', 'trainingPeriodStart', 'trainingPeriodEnd', 'orientationHours', 'practicalHours',
   'remarks', 'hasDifficultyNotification', 'planGuidanceStaffName',
+  'trainingMaterials', 'trainingTools', 'trainingContentItems',
 ]);
 
 const visitsAudits = makeRepo('visits_audits', [

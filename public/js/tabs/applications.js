@@ -177,6 +177,19 @@ const TabApplications = {
       </div>
       <div class="form-group"><label>過去1年以内の技能実習実施困難時届出書の提出有無</label>${yesNoSelect('f_hasDifficultyNotification', item ? item.hasDifficultyNotification : '')}</div>
       <div class="form-group"><label>備考（第11号）</label><input id="f_remarks" value="${item ? escapeHtml(item.remarks) : ''}"></div>
+
+      <div id="trainingScheduleSection">
+        <h4 class="section-title">実習実施予定表（第4面、1号のみ）</h4>
+        <div class="form-row">
+          <div class="form-group"><label>使用する素材、材料等</label><input id="f_trainingMaterials" value="${item ? escapeHtml(item.trainingMaterials) : ''}"></div>
+          <div class="form-group"><label>使用する機械、器具等</label><input id="f_trainingTools" value="${item ? escapeHtml(item.trainingTools) : ''}"></div>
+        </div>
+        <div class="form-group">
+          <label>技能実習の内容 <span class="field-hint">実物様式の「矢印で結ぶ」表現を、開始月・終了月・月あたり時間数の3項目で簡略化して入力します（最大7件）</span></label>
+          <div id="trainingItemsList"></div>
+          <button type="button" class="btn btn-secondary btn-small" id="addTrainingItemBtn" style="width:auto; margin-top:8px;">＋ 内容を追加</button>
+        </div>
+      </div>
     `;
 
     Modal.open(
@@ -241,6 +254,73 @@ const TabApplications = {
     document.getElementById('f_planType').addEventListener('change', togglePriorStage);
     togglePriorStage();
 
+    // 実習実施予定表（第4面）は1号（A・D）のみ対象。技能実習の内容は最大7件まで、
+    // 画面上のみの一覧として保持し、フォーム送信時にまとめてJSONで保存する。
+    const MAX_TRAINING_ITEMS = 7;
+    const DUTY_TYPES = ['必須業務', '関連業務', '周辺業務'];
+    let trainingItems = (item && Array.isArray(item.trainingContentItems) ? item.trainingContentItems : []).map((i) => ({
+      content: i.content || '',
+      dutyType: i.dutyType || '',
+      instructorInfo: i.instructorInfo || '',
+      workplace: i.workplace || '',
+      startMonth: i.startMonth || '',
+      endMonth: i.endMonth || '',
+      hoursPerMonth: i.hoursPerMonth || '',
+      totalHours: i.totalHours || '',
+    }));
+
+    const renderTrainingItems = () => {
+      const listEl = document.getElementById('trainingItemsList');
+      listEl.innerHTML = trainingItems
+        .map(
+          (t, i) => `
+        <div class="card" style="padding:12px; margin-bottom:8px; background:var(--color-bg);">
+          <div class="form-row">
+            <div class="form-group"><label>${i + 1}. 内容</label><input data-ti="${i}" data-field="content" value="${escapeHtml(t.content)}"></div>
+            <div class="form-group"><label>区分</label><select data-ti="${i}" data-field="dutyType"><option value="">選択</option>${DUTY_TYPES.map((d) => `<option value="${d}" ${t.dutyType === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>指導員（役職・氏名・経験年数）</label><input data-ti="${i}" data-field="instructorInfo" value="${escapeHtml(t.instructorInfo)}"></div>
+            <div class="form-group"><label>事業所</label><input data-ti="${i}" data-field="workplace" value="${escapeHtml(t.workplace)}"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>開始月</label><input data-ti="${i}" data-field="startMonth" type="number" min="1" max="12" value="${escapeHtml(t.startMonth)}"></div>
+            <div class="form-group"><label>終了月</label><input data-ti="${i}" data-field="endMonth" type="number" min="1" max="12" value="${escapeHtml(t.endMonth)}"></div>
+            <div class="form-group"><label>月あたり時間数</label><input data-ti="${i}" data-field="hoursPerMonth" type="number" value="${escapeHtml(t.hoursPerMonth)}"></div>
+            <div class="form-group"><label>合計時間</label><input data-ti="${i}" data-field="totalHours" type="number" value="${escapeHtml(t.totalHours)}"></div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-small" data-remove-ti="${i}" style="width:auto;">削除</button>
+        </div>`
+        )
+        .join('');
+      listEl.querySelectorAll('[data-ti]').forEach((el) => {
+        el.addEventListener('input', () => {
+          trainingItems[Number(el.dataset.ti)][el.dataset.field] = el.value;
+        });
+      });
+      listEl.querySelectorAll('[data-remove-ti]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          trainingItems.splice(Number(btn.dataset.removeTi), 1);
+          renderTrainingItems();
+        });
+      });
+      const addBtn = document.getElementById('addTrainingItemBtn');
+      if (addBtn) addBtn.disabled = trainingItems.length >= MAX_TRAINING_ITEMS;
+    };
+    renderTrainingItems();
+    document.getElementById('addTrainingItemBtn').addEventListener('click', () => {
+      if (trainingItems.length >= MAX_TRAINING_ITEMS) return;
+      trainingItems.push({ content: '', dutyType: '', instructorInfo: '', workplace: '', startMonth: '', endMonth: '', hoursPerMonth: '', totalHours: '' });
+      renderTrainingItems();
+    });
+
+    const toggleTrainingSchedule = () => {
+      const planType = document.getElementById('f_planType').value;
+      document.getElementById('trainingScheduleSection').hidden = !['A', 'D'].includes(planType);
+    };
+    document.getElementById('f_planType').addEventListener('change', toggleTrainingSchedule);
+    toggleTrainingSchedule();
+
     document.getElementById('caseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const val = (id) => document.getElementById(id).value;
@@ -285,6 +365,9 @@ const TabApplications = {
         practicalHours: val('f_practicalHours') || null,
         hasDifficultyNotification: val('f_hasDifficultyNotification'),
         remarks: val('f_remarks'),
+        trainingMaterials: val('f_trainingMaterials'),
+        trainingTools: val('f_trainingTools'),
+        trainingContentItems: trainingItems.filter((t) => t.content.trim()),
       };
       try {
         if (isEdit) {
