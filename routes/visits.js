@@ -1,7 +1,11 @@
 const express = require('express');
 const { visitsAudits, workers, hostCompanies } = require('../db');
 const { getDaysUntil, getUrgency } = require('../lib/dates');
-const { ensureVisitSchedule } = require('../lib/visitScheduler');
+// 監査・面談の自動スケジュール生成は、ユーザーの希望により無効化している
+// （全件削除後も自動で復活してしまい、手動管理したいという要望のため）。
+// lib/visitScheduler.js 自体は削除せず残してあるので、必要になれば
+// 下のensureVisitSchedule()呼び出しを再度有効にするだけで元に戻せる。
+// const { ensureVisitSchedule } = require('../lib/visitScheduler');
 
 const router = express.Router();
 
@@ -43,10 +47,6 @@ function buildRecord(body, existing = {}) {
 router.get('/types', (req, res) => res.json(VISIT_TYPES));
 
 router.get('/', async (req, res) => {
-  // 監査（3ヶ月ごと）・面談（技能実習1号は1ヶ月ごと）の次回予定を、必要に応じて
-  // 自動生成してから一覧を返す（未完了の予定が既にある対象には生成しない）。
-  await ensureVisitSchedule();
-
   const { workerId, hostCompanyId, type } = req.query;
   const [allVisits, allWorkers, allCompanies] = await Promise.all([
     visitsAudits.list(),
