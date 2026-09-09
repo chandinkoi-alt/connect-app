@@ -34,7 +34,10 @@ const STATUS_OPTIONS = ['lead', 'active', 'withdrawn'];
 function buildRecord(body, existing = {}) {
   const status = body.status || existing.status || 'lead';
   return {
-    companyNo: existing.companyNo ?? null,
+    // companyNo（Excel由来の企業№）は通常の編集フォームからは送られてこないため、
+    // 未指定の場合は既存値を保持する。明示的に指定された場合のみ上書きできる
+    // （データ補正など、企業№自体を修正する必要があるケースのため）。
+    companyNo: body.companyNo !== undefined ? (body.companyNo === null || body.companyNo === '' ? null : Number(body.companyNo)) : existing.companyNo ?? null,
     name: (body.name || '').trim(),
     industry: (body.industry || '').trim(),
     address: (body.address || '').trim(),
