@@ -15,7 +15,9 @@ const TabDashboard = {
 
   async render(container) {
     container.innerHTML = `
-      <section class="stats-bar" id="dashStats"></section>
+      <section class="stats-bar" id="dashStats">
+        <div class="loading-inline"><span class="spinner"></span> 読み込み中...</div>
+      </section>
       <section class="card">
         <div class="card-title-row">
           <h2 class="card-title">対応が必要な項目</h2>
@@ -25,7 +27,7 @@ const TabDashboard = {
             <option value="warning">期限間近</option>
           </select>
         </div>
-        <div id="taskList"></div>
+        <div id="taskList"><div class="loading-inline"><span class="spinner"></span> 読み込み中...</div></div>
       </section>
     `;
 
