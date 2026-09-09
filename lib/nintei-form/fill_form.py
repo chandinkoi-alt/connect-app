@@ -326,13 +326,25 @@ def fill(doc, data):
             break
 
 
+def normalize_nulls(obj):
+    """DBの未入力欄はJSON上 null になることがあるが、このスクリプトは終始
+    「未入力＝空文字列」を前提にしている（.get(key, '') は値が null の場合は
+    効かず None のまま通ってしまい、python-docxへの書き込み時にクラッシュする
+    ため）。読み込み直後に再帰的に null を '' へ正規化しておく。"""
+    if isinstance(obj, dict):
+        return {k: normalize_nulls(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [normalize_nulls(v) for v in obj]
+    return '' if obj is None else obj
+
+
 def main():
     if len(sys.argv) != 3:
         print('usage: fill_form.py <input.json> <output.docx>', file=sys.stderr)
         sys.exit(1)
     input_path, output_path = sys.argv[1], sys.argv[2]
     with open(input_path, encoding='utf-8') as f:
-        data = json.load(f)
+        data = normalize_nulls(json.load(f))
     doc = docx.Document(TEMPLATE_PATH)
     fill(doc, data)
     doc.save(output_path)
