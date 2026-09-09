@@ -118,7 +118,10 @@ const TabApplications = {
 
     // 技能実習計画認定申請書は「技能実習」の申請案件にのみ関係する（第1段階では第1・2・7面のみ対応）
     const ninteiHtml = `
-      <h4 class="section-title">技能実習計画認定申請書（第1・2・7面）</h4>
+      <div class="card-title-row">
+        <h4 class="section-title" style="margin:0;">技能実習計画認定申請書（第1・2・7面）</h4>
+        ${isEdit ? `<button type="button" class="btn btn-secondary btn-small" id="ninteiPdfBtn" style="width:auto;">PDF出力</button>` : ''}
+      </div>
       <div class="form-row">
         <div class="form-group"><label>技能実習の区分</label><select id="f_planType"><option value="">選択</option>${planTypeOptions}</select></div>
         <div class="form-group"><label>計画指導担当者</label><input id="f_planGuidanceStaffName" value="${item ? escapeHtml(item.planGuidanceStaffName) : ''}"></div>
@@ -194,6 +197,8 @@ const TabApplications = {
           await this.load();
         });
       });
+      const pdfBtn = document.getElementById('ninteiPdfBtn');
+      if (pdfBtn) pdfBtn.addEventListener('click', () => window.open(`/api/application-cases/${item.id}/pdf`, '_blank'));
     }
 
     const toggleNinteiSection = () => {
