@@ -47,7 +47,9 @@ const SCHEMA = `
     dormitoryInfo TEXT,
     notes TEXT,
     status TEXT NOT NULL DEFAULT 'lead',
-    leadStage TEXT
+    leadStage TEXT,
+    bankAccountType TEXT,
+    bankAccountLast3 TEXT
   );
 
   CREATE TABLE IF NOT EXISTS company_registrations (
@@ -201,6 +203,7 @@ const MIGRATION_COLUMNS = {
     ['lifeInstructor', 'TEXT'], ['dormitoryAddress', 'TEXT'], ['dormitoryMonthlyFee', 'INTEGER'],
     ['dormitoryRoomSizeOk', 'TEXT'], ['dormitoryHasLock', 'TEXT'], ['dormitoryHasValuablesStorage', 'TEXT'],
     ['dormitoryInfo', 'TEXT'], ['notes', 'TEXT'], ['leadStage', 'TEXT'],
+    ['bankAccountType', 'TEXT'], ['bankAccountLast3', 'TEXT'],
   ],
   workers: [
     ['personalNo', 'INTEGER'],
@@ -285,6 +288,7 @@ const hostCompanies = makeRepo('host_companies', [
   'representativeName', 'regularEmployeeCount', 'trainingManagerName', 'skillInstructor', 'lifeInstructor',
   'dormitoryAddress', 'dormitoryMonthlyFee', 'dormitoryRoomSizeOk', 'dormitoryHasLock',
   'dormitoryHasValuablesStorage', 'dormitoryInfo', 'notes', 'status', 'leadStage',
+  'bankAccountType', 'bankAccountLast3',
 ]);
 
 const companyRegistrations = makeRepo('company_registrations', [
