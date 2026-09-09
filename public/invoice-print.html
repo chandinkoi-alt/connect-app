@@ -86,14 +86,16 @@
     .recipient .code { margin-top: 5px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .issuer { text-align: left; width: 340px; }
-    .issuer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: relative; z-index: 1; }
-    .issuer-brand img.logo { height: 68px; width: auto; }
-    .issuer-brand .brand-jp { font-size: 17px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+    /* ロゴ画像に「CONNECT」「コネクト協同組合」の文字が含まれているため、
+       文字を別途重ねて描画する必要はない（実物の請求書のロゴに合わせる） */
+    .issuer-brand { display: flex; align-items: flex-start; margin-bottom: 10px; position: relative; z-index: 1; }
+    .issuer-brand img.logo { height: 58px; width: auto; }
     .issuer-lines { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
     .issuer-lines .reg-number { margin-top: 3px; font-variant-numeric: tabular-nums; }
-    /* 会社名のすぐ右、少し重なる位置に角印を配置する（実際の請求書の慣例に合わせる）。
-       下の住所欄に少しかぶっても問題ない、との指示のためサイズを大きめにしている */
-    .issuer-stamp { width: 84px; height: 84px; margin-left: -30px; margin-bottom: -20px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; position: relative; z-index: 2; }
+    /* ロゴの「CONNECT」文字の右側に少し重なる位置に角印を配置する（実際の請求書の
+       慣例に合わせる）。下の住所欄に少しかぶっても問題ない、との指示のためサイズを
+       大きめにしている */
+    .issuer-stamp { width: 64px; height: 64px; margin-left: -40px; margin-top: 14px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; position: relative; z-index: 2; }
 
     .summary-row {
       display: flex;
@@ -316,8 +318,7 @@
           </div>
           <div class="issuer">
             <div class="issuer-brand">
-              <img src="assets/logo.png" alt="CONNECT" class="logo" />
-              <span class="brand-jp">${escapeHtml(issuer.name)}</span>
+              <img src="assets/logo.png" alt="コネクト協同組合" class="logo" />
               <img src="assets/stamp.png" alt="印" class="issuer-stamp" />
             </div>
             <div class="issuer-lines">
