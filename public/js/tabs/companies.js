@@ -120,9 +120,10 @@ const TabCompanies = {
   },
 
   async openProfile(company) {
-    const [regs, audits] = await Promise.all([
+    const [regs, audits, officers] = await Promise.all([
       api.get(`/api/host-companies/${company.id}/registrations`),
       api.get(`/api/visits?hostCompanyId=${company.id}&type=${encodeURIComponent('監査')}`),
+      api.get(`/api/host-companies/${company.id}/officers`),
     ]);
     const completedAudits = audits.filter((a) => a.completedDate).sort((a, b) => (a.completedDate < b.completedDate ? 1 : -1));
     const lastAuditDate = completedAudits.length ? completedAudits[0].completedDate : '';
@@ -146,6 +147,8 @@ const TabCompanies = {
         <div><label>技能指導員</label><div>${escapeHtml(company.skillInstructor) || '－'}</div></div>
         <div><label>生活指導員</label><div>${escapeHtml(company.lifeInstructor) || '－'}</div></div>
         <div><label>引落口座（請求書用）</label><div>${company.bankAccountLast3 ? `${escapeHtml(company.bankAccountType) || '普通'}　＊＊＊＊${escapeHtml(company.bankAccountLast3)}` : '－'}</div></div>
+        <div><label>法人番号</label><div>${escapeHtml(company.corporateNumber) || '－'}</div></div>
+        <div><label>業種（認定申請書用）</label><div>${escapeHtml(company.industryMajorName) || escapeHtml(company.industryMinorName) ? `${escapeHtml(company.industryMajorName)}${company.industryMajorName && company.industryMinorName ? ' / ' : ''}${escapeHtml(company.industryMinorName)}` : '－'}</div></div>
       </div>
 
       <h4 class="section-title">宿舎情報</h4>
@@ -172,6 +175,15 @@ const TabCompanies = {
       </div>
       <button class="btn btn-secondary btn-small" id="addRegBtn" style="width:auto;">追加する</button>
 
+      <h4 class="section-title">役員一覧（認定申請書用・${officers.length}名）</h4>
+      <div id="companyOfficersList">${this.renderOfficers(officers)}</div>
+      <div class="form-row" style="margin-top:10px;">
+        <div class="form-group"><label>氏名</label><input id="newOfficerName" placeholder="例: 山田太郎"></div>
+        <div class="form-group"><label>役職名</label><input id="newOfficerTitle" placeholder="例: 代表取締役"></div>
+      </div>
+      <div class="form-group"><label>住所（技能実習業務に直接関与しない役員は省略可）</label><input id="newOfficerAddress" placeholder="〒999-9999 ○○..."></div>
+      <button class="btn btn-secondary btn-small" id="addOfficerBtn" style="width:auto;">追加する</button>
+
       <div class="form-actions" style="margin-top:15px;">
         <button class="btn btn-primary" id="profileEditBtn">基本情報を編集する</button>
       </div>
@@ -183,6 +195,70 @@ const TabCompanies = {
 
     document.getElementById('profileEditBtn').addEventListener('click', () => this.openEditForm(company));
     this.wireRegistrationHandlers(company.id);
+    this.wireOfficerHandlers(company.id);
+  },
+
+  renderOfficers(officers) {
+    if (!officers.length) return '<div class="empty-hint">役員が登録されていません。</div>';
+    return `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>氏名</th><th>役職名</th><th>住所</th><th></th></tr></thead>
+          <tbody>
+            ${officers
+              .map(
+                (o) => `
+              <tr data-officer-id="${o.id}">
+                <td><input class="officer-name" value="${escapeHtml(o.name)}" style="min-width:100px;"></td>
+                <td><input class="officer-title" value="${escapeHtml(o.title)}" style="min-width:100px;"></td>
+                <td><input class="officer-address" value="${escapeHtml(o.address)}" style="min-width:200px;"></td>
+                <td><button class="link-btn link-delete" data-action="delete-officer" data-id="${o.id}">削除</button></td>
+              </tr>`
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>`;
+  },
+
+  wireOfficerHandlers(companyId) {
+    document.querySelectorAll('#companyOfficersList tr[data-officer-id]').forEach((row) => {
+      const officerId = row.dataset.officerId;
+      const save = async () => {
+        await api.put(`/api/host-companies/${companyId}/officers/${officerId}`, {
+          name: row.querySelector('.officer-name').value,
+          title: row.querySelector('.officer-title').value,
+          address: row.querySelector('.officer-address').value,
+        });
+      };
+      row.querySelectorAll('input').forEach((input) => input.addEventListener('change', save));
+    });
+
+    document.querySelectorAll('button[data-action="delete-officer"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!(await ConfirmDialog.show('この役員を削除しますか？'))) return;
+        await api.del(`/api/host-companies/${companyId}/officers/${btn.dataset.id}`);
+        const officers = await api.get(`/api/host-companies/${companyId}/officers`);
+        document.getElementById('companyOfficersList').innerHTML = this.renderOfficers(officers);
+        this.wireOfficerHandlers(companyId);
+      });
+    });
+
+    document.getElementById('addOfficerBtn').addEventListener('click', async () => {
+      const name = document.getElementById('newOfficerName').value;
+      if (!name.trim()) return;
+      await api.post(`/api/host-companies/${companyId}/officers`, {
+        name,
+        title: document.getElementById('newOfficerTitle').value,
+        address: document.getElementById('newOfficerAddress').value,
+      });
+      const officers = await api.get(`/api/host-companies/${companyId}/officers`);
+      document.getElementById('companyOfficersList').innerHTML = this.renderOfficers(officers);
+      this.wireOfficerHandlers(companyId);
+      document.getElementById('newOfficerName').value = '';
+      document.getElementById('newOfficerTitle').value = '';
+      document.getElementById('newOfficerAddress').value = '';
+    });
   },
 
   renderRegistrations(regs) {
@@ -293,6 +369,17 @@ const TabCompanies = {
           <div class="form-group"><label>引落口座 下3〜4ケタ（請求書用）</label><input id="f_bankAccountLast3" maxlength="4" placeholder="例: 637" value="${company ? escapeHtml(company.bankAccountLast3) : ''}"></div>
         </div>
 
+        <h4 class="section-title">認定申請書用の項目</h4>
+        <div class="form-group"><label>法人番号</label><input id="f_corporateNumber" maxlength="13" placeholder="13桁の数字" value="${company ? escapeHtml(company.corporateNumber) : ''}"></div>
+        <div class="form-row">
+          <div class="form-group"><label>業種（大分類）</label><input id="f_industryMajorName" placeholder="例: 建設業" value="${company ? escapeHtml(company.industryMajorName) : ''}"></div>
+          <div class="form-group"><label>業種コード（大分類）</label><input id="f_industryMajorCode" placeholder="例: D" value="${company ? escapeHtml(company.industryMajorCode) : ''}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>業種（小分類）</label><input id="f_industryMinorName" placeholder="例: とび・土工・コンクリート工事業" value="${company ? escapeHtml(company.industryMinorName) : ''}"></div>
+          <div class="form-group"><label>業種コード（小分類）</label><input id="f_industryMinorCode" placeholder="例: 0611" value="${company ? escapeHtml(company.industryMinorCode) : ''}"></div>
+        </div>
+
         <h4 class="section-title">宿舎情報</h4>
         <div class="form-group"><label>宿舎住所</label><input id="f_dormitoryAddress" value="${company ? escapeHtml(company.dormitoryAddress) : ''}"></div>
         <div class="form-row">
@@ -339,6 +426,11 @@ const TabCompanies = {
         dormitoryInfo: val('f_dormitoryInfo'),
         bankAccountType: val('f_bankAccountType'),
         bankAccountLast3: val('f_bankAccountLast3'),
+        corporateNumber: val('f_corporateNumber'),
+        industryMajorCode: val('f_industryMajorCode'),
+        industryMajorName: val('f_industryMajorName'),
+        industryMinorCode: val('f_industryMinorCode'),
+        industryMinorName: val('f_industryMinorName'),
         notes: val('f_notes'),
         status: 'active',
       };
