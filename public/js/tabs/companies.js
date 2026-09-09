@@ -145,6 +145,7 @@ const TabCompanies = {
         <div><label>実習責任者</label><div>${escapeHtml(company.trainingManagerName) || '－'}</div></div>
         <div><label>技能指導員</label><div>${escapeHtml(company.skillInstructor) || '－'}</div></div>
         <div><label>生活指導員</label><div>${escapeHtml(company.lifeInstructor) || '－'}</div></div>
+        <div><label>引落口座（請求書用）</label><div>${company.bankAccountLast3 ? `${escapeHtml(company.bankAccountType) || '普通'}　＊＊＊＊${escapeHtml(company.bankAccountLast3)}` : '－'}</div></div>
       </div>
 
       <h4 class="section-title">宿舎情報</h4>
@@ -287,6 +288,10 @@ const TabCompanies = {
           <div class="form-group"><label>技能指導員</label><input id="f_skillInstructor" value="${company ? escapeHtml(company.skillInstructor) : ''}"></div>
           <div class="form-group"><label>生活指導員</label><input id="f_lifeInstructor" value="${company ? escapeHtml(company.lifeInstructor) : ''}"></div>
         </div>
+        <div class="form-row">
+          <div class="form-group"><label>引落口座の種類（請求書用）</label><input id="f_bankAccountType" placeholder="普通" value="${company ? escapeHtml(company.bankAccountType) : ''}"></div>
+          <div class="form-group"><label>引落口座 下3〜4ケタ（請求書用）</label><input id="f_bankAccountLast3" maxlength="4" placeholder="例: 637" value="${company ? escapeHtml(company.bankAccountLast3) : ''}"></div>
+        </div>
 
         <h4 class="section-title">宿舎情報</h4>
         <div class="form-group"><label>宿舎住所</label><input id="f_dormitoryAddress" value="${company ? escapeHtml(company.dormitoryAddress) : ''}"></div>
@@ -332,6 +337,8 @@ const TabCompanies = {
         dormitoryHasLock: val('f_dormitoryHasLock'),
         dormitoryHasValuablesStorage: val('f_dormitoryHasValuablesStorage'),
         dormitoryInfo: val('f_dormitoryInfo'),
+        bankAccountType: val('f_bankAccountType'),
+        bankAccountLast3: val('f_bankAccountLast3'),
         notes: val('f_notes'),
         status: 'active',
       };

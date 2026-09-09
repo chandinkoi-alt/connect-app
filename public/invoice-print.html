@@ -60,9 +60,9 @@
       gap: 18px;
       margin-bottom: 4px;
     }
-    .doc-title { font-size: 19px; font-weight: 900; letter-spacing: 0.02em; }
-    .doc-meta { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-    .doc-meta div { margin-top: 2px; }
+    .doc-title { font-size: 23px; font-weight: 900; letter-spacing: 0.02em; }
+    .doc-meta { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .doc-meta div { margin-top: 3px; }
 
     .header-grid {
       display: flex;
@@ -73,23 +73,23 @@
     }
 
     .recipient { padding-top: 6px; }
-    .recipient .postal { font-size: 12px; }
-    .recipient .address { font-size: 12px; margin-top: 2px; }
+    .recipient .postal { font-size: 13.5px; }
+    .recipient .address { font-size: 13.5px; margin-top: 3px; }
     .recipient .name-row {
       margin-top: 22px;
       display: flex;
       align-items: baseline;
       gap: 8px;
     }
-    .recipient .name { font-size: 17px; font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
-    .recipient .onchu { font-size: 13px; }
-    .recipient .code { margin-top: 4px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .recipient .name { font-size: 20px; font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+    .recipient .onchu { font-size: 15px; }
+    .recipient .code { margin-top: 5px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
     .issuer { text-align: left; width: 300px; }
     .issuer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .issuer-brand img.logo { height: 46px; width: auto; }
-    .issuer-brand .brand-jp { font-size: 15px; font-weight: 700; color: var(--ink); }
-    .issuer-lines { font-size: 11px; color: var(--muted); line-height: 1.65; }
+    .issuer-brand .brand-jp { font-size: 17px; font-weight: 700; color: var(--ink); }
+    .issuer-lines { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
     .issuer-lines .reg-number { margin-top: 3px; font-variant-numeric: tabular-nums; }
     /* 会社名のすぐ右、少し重なる位置に角印を配置する（実際の請求書の慣例に合わせる） */
     .issuer-stamp { width: 66px; height: 66px; margin-left: -16px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; }
@@ -102,20 +102,20 @@
       gap: 24px;
     }
 
-    .debit-date-block .label { font-size: 12px; }
+    .debit-date-block .label { font-size: 13.5px; }
     .debit-date-block .date {
-      font-size: 21px;
+      font-size: 24px;
       font-weight: 700;
       border-bottom: 2px solid var(--line);
       padding-bottom: 4px;
       margin-top: 4px;
-      min-width: 200px;
+      min-width: 210px;
     }
-    .debit-date-block .note { font-size: 10px; color: var(--muted); margin-top: 5px; }
+    .debit-date-block .note { font-size: 11px; color: var(--muted); margin-top: 5px; }
 
     table.tax-summary {
       border-collapse: collapse;
-      font-size: 11px;
+      font-size: 12.5px;
     }
     table.tax-summary th, table.tax-summary td {
       border: 1px solid var(--line);
@@ -125,7 +125,7 @@
       white-space: nowrap;
     }
     table.tax-summary th { background: #f4f4f4; font-weight: 500; text-align: center; }
-    table.tax-summary td.grand { font-weight: 700; font-size: 13px; }
+    table.tax-summary td.grand { font-weight: 700; font-size: 15px; }
 
     table.items-table {
       width: 100%;
@@ -252,6 +252,8 @@
 
       const issuer = inv.issuer;
       const company = inv.company;
+      const bankAccountTypeDisplay = (company && company.bankAccountLast3) ? (company.bankAccountType || '普通') : issuer.bankAccountType;
+      const bankAccountMaskedDisplay = (company && company.bankAccountLast3) ? `＊＊＊＊${company.bankAccountLast3}` : issuer.bankAccountMasked;
 
       const itemRows = inv.items
         .map((item, i) => {
@@ -358,7 +360,7 @@
 
         <div class="bottom-note">
           <div>貴社指定口座　※ 引落し日前日までにご入金をお願い致します。</div>
-          <div class="bank">${escapeHtml(issuer.bankAccountType)}　<span class="masked">${escapeHtml(issuer.bankAccountMasked)}</span>　${escapeHtml(issuer.bankAccountNote)}</div>
+          <div class="bank">${escapeHtml(bankAccountTypeDisplay)}　<span class="masked">${escapeHtml(bankAccountMaskedDisplay)}</span>　${escapeHtml(issuer.bankAccountNote)}</div>
         </div>
       `;
 

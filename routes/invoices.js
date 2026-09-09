@@ -100,7 +100,14 @@ async function buildInvoiceDetail(id) {
     ...computeTaxSummary(itemsWithWorkerName),
     invoiceNumber: String(invoice.id).padStart(4, '0'),
     company: company
-      ? { id: company.id, name: company.name, companyNo: company.companyNo, address: company.address }
+      ? {
+          id: company.id,
+          name: company.name,
+          companyNo: company.companyNo,
+          address: company.address,
+          bankAccountType: company.bankAccountType,
+          bankAccountLast3: company.bankAccountLast3,
+        }
       : null,
     issuer: ISSUER,
   };

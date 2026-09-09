@@ -59,6 +59,10 @@ function buildRecord(body, existing = {}) {
     notes: (body.notes || '').trim(),
     status,
     leadStage: status === 'lead' ? body.leadStage || existing.leadStage || LEAD_STAGES[0] : null,
+    // 請求書（口座引落のご案内）の下部に表示する、この企業指定の引落口座番号
+    // （下3〜4ケタのみ。振り込め詐欺対策等のため、全桁は保持しない）。
+    bankAccountType: (body.bankAccountType || '').trim(),
+    bankAccountLast3: (body.bankAccountLast3 || '').replace(/[^0-9]/g, '').slice(-4),
   };
 }
 
