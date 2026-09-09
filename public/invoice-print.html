@@ -213,6 +213,14 @@
     function yen(n) {
       return (n ?? 0).toLocaleString('ja-JP');
     }
+    // 受入企業の住所は「〒999-9999 ○○県○○市...」の形で1フィールドに保存されている。
+    // サンプルの請求書では宛先側の郵便番号だけ「〒 999-9999」と1文字分空けて別行に
+    // なっているため、ここで分割して再現する（分割できない場合はそのまま1行で表示）。
+    function splitPostalAddress(address) {
+      const m = String(address || '').match(/^〒\s*(\d{3}-\d{4})\s*(.*)$/);
+      if (!m) return null;
+      return { postal: m[1], rest: m[2] };
+    }
 
     async function main() {
       const params = new URLSearchParams(window.location.search);
@@ -277,6 +285,13 @@
       const fillerRows = Array.from({ length: fillerCount }, () => '<tr class="filler"><td></td><td></td><td></td><td></td><td></td><td></td></tr>').join('');
       const itemRowsHtml = itemRows.map((r) => r.html).join('') + fillerRows;
 
+      const addressSplit = company && company.address ? splitPostalAddress(company.address) : null;
+      const recipientAddressHtml = addressSplit
+        ? `<div class="postal">〒 ${escapeHtml(addressSplit.postal)}</div><div class="address">${escapeHtml(addressSplit.rest)}</div>`
+        : company && company.address
+          ? `<div class="address">${escapeHtml(company.address)}</div>`
+          : '';
+
       const sheet = document.getElementById('sheet');
       sheet.innerHTML = `
         <div class="doc-title-row">
@@ -289,7 +304,7 @@
 
         <div class="header-grid">
           <div class="recipient">
-            ${company && company.address ? `<div class="address">${escapeHtml(company.address)}</div>` : ''}
+            ${recipientAddressHtml}
             <div class="name-row">
               <span class="name">${escapeHtml(inv.companyName)}</span>
               <span class="onchu">御中</span>
