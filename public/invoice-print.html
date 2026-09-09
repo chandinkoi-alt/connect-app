@@ -85,14 +85,15 @@
     .recipient .onchu { font-size: 15px; }
     .recipient .code { margin-top: 5px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-    .issuer { text-align: left; width: 300px; }
-    .issuer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .issuer-brand img.logo { height: 60px; width: auto; }
-    .issuer-brand .brand-jp { font-size: 17px; font-weight: 700; color: var(--ink); }
-    .issuer-lines { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+    .issuer { text-align: left; width: 340px; }
+    .issuer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: relative; z-index: 1; }
+    .issuer-brand img.logo { height: 68px; width: auto; }
+    .issuer-brand .brand-jp { font-size: 17px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+    .issuer-lines { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
     .issuer-lines .reg-number { margin-top: 3px; font-variant-numeric: tabular-nums; }
-    /* 会社名のすぐ右、少し重なる位置に角印を配置する（実際の請求書の慣例に合わせる） */
-    .issuer-stamp { width: 66px; height: 66px; margin-left: -26px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; }
+    /* 会社名のすぐ右、少し重なる位置に角印を配置する（実際の請求書の慣例に合わせる）。
+       下の住所欄に少しかぶっても問題ない、との指示のためサイズを大きめにしている */
+    .issuer-stamp { width: 84px; height: 84px; margin-left: -30px; margin-bottom: -20px; opacity: 0.9; mix-blend-mode: multiply; pointer-events: none; flex-shrink: 0; position: relative; z-index: 2; }
 
     .summary-row {
       display: flex;
