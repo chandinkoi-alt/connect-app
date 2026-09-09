@@ -87,6 +87,17 @@ function buildRecord(body, existing = {}) {
     tokuteiTrainingStatus: body.tokuteiTrainingStatus || '',
     tokuteiTrainingDate: body.tokuteiTrainingDate || '',
     generation: (body.generation ?? existing.generation ?? '').toString().trim(),
+    // 技能実習計画認定申請書 第2面「10 技能実習生の待遇」用
+    wageType: body.wageType || '',
+    trainingAllowance: body.trainingAllowance ? Number(body.trainingAllowance) : null,
+    breakStartTime: (body.breakStartTime || '').trim(),
+    breakEndTime: (body.breakEndTime || '').trim(),
+    annualWorkingHours: body.annualWorkingHours ? Number(body.annualWorkingHours) : null,
+    weeklyAverageWorkingHours: (body.weeklyAverageWorkingHours || '').trim(),
+    leaveInfo: (body.leaveInfo || '').trim(),
+    mealFee: body.mealFee ? Number(body.mealFee) : null,
+    housingFeeDeduction: body.housingFeeDeduction ? Number(body.housingFeeDeduction) : null,
+    otherFeeDeduction: body.otherFeeDeduction ? Number(body.otherFeeDeduction) : null,
   };
 }
 

@@ -6,6 +6,17 @@ const router = express.Router();
 
 const STATUSES = ['書類準備中', '提出済み', '追加書類対応中', '認定済み'];
 
+// 技能実習の区分（技能実習計画認定申請書 第2面「４ 技能実習の区分」）
+// A/D=第1号、B/E=第2号、C/F=第3号。A・B・C=企業単独型、D・E・F=団体監理型。
+const PLAN_TYPES = [
+  { code: 'A', label: 'A（第一号企業単独型）' },
+  { code: 'B', label: 'B（第二号企業単独型）' },
+  { code: 'C', label: 'C（第三号企業単独型）' },
+  { code: 'D', label: 'D（第一号団体監理型）' },
+  { code: 'E', label: 'E（第二号団体監理型）' },
+  { code: 'F', label: 'F（第三号団体監理型）' },
+];
+
 function joinCase(appCase, workerById, companyById) {
   const worker = appCase.workerId ? workerById.get(appCase.workerId) : null;
   const company = worker && worker.hostCompanyId ? companyById.get(worker.hostCompanyId) : null;
@@ -42,10 +53,31 @@ function buildRecord(body, existing = {}) {
     checklist: body.checklist
       ? JSON.stringify(body.checklist)
       : existing.checklist || JSON.stringify(buildChecklist(body.statusType || existing.statusType)),
+    // 技能実習計画認定申請書（第1・2・7面）用
+    applicationDate: body.applicationDate ?? existing.applicationDate ?? '',
+    planCreationDate: body.planCreationDate ?? existing.planCreationDate ?? '',
+    planType: body.planType ?? existing.planType ?? '',
+    jobCategoryCode: (body.jobCategoryCode ?? existing.jobCategoryCode ?? '').toString().trim(),
+    jobCategoryName: (body.jobCategoryName ?? existing.jobCategoryName ?? '').toString().trim(),
+    workName: (body.workName ?? existing.workName ?? '').toString().trim(),
+    jobCategoryFreeText: (body.jobCategoryFreeText ?? existing.jobCategoryFreeText ?? '').toString().trim(),
+    trainingGoalType: body.trainingGoalType ?? existing.trainingGoalType ?? '',
+    trainingGoalDetail: (body.trainingGoalDetail ?? existing.trainingGoalDetail ?? '').toString().trim(),
+    priorStageGoalType: body.priorStageGoalType ?? existing.priorStageGoalType ?? '',
+    priorStageGoalDetail: (body.priorStageGoalDetail ?? existing.priorStageGoalDetail ?? '').toString().trim(),
+    priorApprovalNumber: (body.priorApprovalNumber ?? existing.priorApprovalNumber ?? '').toString().trim(),
+    trainingPeriodStart: body.trainingPeriodStart ?? existing.trainingPeriodStart ?? '',
+    trainingPeriodEnd: body.trainingPeriodEnd ?? existing.trainingPeriodEnd ?? '',
+    orientationHours: body.orientationHours !== undefined ? Number(body.orientationHours) || null : existing.orientationHours ?? null,
+    practicalHours: body.practicalHours !== undefined ? Number(body.practicalHours) || null : existing.practicalHours ?? null,
+    remarks: (body.remarks ?? existing.remarks ?? '').toString().trim(),
+    hasDifficultyNotification: body.hasDifficultyNotification ?? existing.hasDifficultyNotification ?? '',
+    planGuidanceStaffName: (body.planGuidanceStaffName ?? existing.planGuidanceStaffName ?? '').toString().trim(),
   };
 }
 
 router.get('/statuses', (req, res) => res.json(STATUSES));
+router.get('/plan-types', (req, res) => res.json(PLAN_TYPES));
 
 router.get('/', async (req, res) => {
   const { workerId, companyId, status } = req.query;

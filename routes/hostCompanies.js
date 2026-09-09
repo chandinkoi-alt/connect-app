@@ -1,5 +1,5 @@
 const express = require('express');
-const { hostCompanies, companyRegistrations } = require('../db');
+const { hostCompanies, companyRegistrations, companyOfficers } = require('../db');
 const { getDaysUntil, getUrgency } = require('../lib/dates');
 const { getEffectiveExpiryDate } = require('../lib/companyRegistrationExpiry');
 
@@ -63,6 +63,12 @@ function buildRecord(body, existing = {}) {
     // （下3〜4ケタのみ。振り込め詐欺対策等のため、全桁は保持しない）。
     bankAccountType: (body.bankAccountType || '').trim(),
     bankAccountLast3: (body.bankAccountLast3 || '').replace(/[^0-9]/g, '').slice(-4),
+    // 技能実習計画認定申請書 第2面「1 申請者」用
+    corporateNumber: (body.corporateNumber || '').trim(),
+    industryMajorCode: (body.industryMajorCode || '').trim(),
+    industryMajorName: (body.industryMajorName || '').trim(),
+    industryMinorCode: (body.industryMinorCode || '').trim(),
+    industryMinorName: (body.industryMinorName || '').trim(),
   };
 }
 
@@ -194,6 +200,56 @@ router.delete('/:id/registrations/:regId', async (req, res) => {
     return res.status(404).json({ error: '登録項目が見つかりません。' });
   }
   await companyRegistrations.remove(regId);
+  res.json({ ok: true });
+});
+
+// 役員一覧（技能実習計画認定申請書 第2面「1 申請者」⑥用）
+router.get('/:id/officers', async (req, res) => {
+  const hostCompanyId = Number(req.params.id);
+  if (!(await hostCompanies.get(hostCompanyId))) return res.status(404).json({ error: '企業が見つかりません。' });
+  res.json(await companyOfficers.listByCompany(hostCompanyId));
+});
+
+router.post('/:id/officers', async (req, res) => {
+  const hostCompanyId = Number(req.params.id);
+  if (!(await hostCompanies.get(hostCompanyId))) return res.status(404).json({ error: '企業が見つかりません。' });
+  const name = (req.body.name || '').trim();
+  if (!name) return res.status(400).json({ errors: ['役員の氏名は必須です。'] });
+  const record = await companyOfficers.insert({
+    hostCompanyId,
+    name,
+    title: (req.body.title || '').trim(),
+    address: (req.body.address || '').trim(),
+  });
+  res.status(201).json(record);
+});
+
+router.put('/:id/officers/:officerId', async (req, res) => {
+  const hostCompanyId = Number(req.params.id);
+  const officerId = Number(req.params.officerId);
+  const existing = await companyOfficers.get(officerId);
+  if (!existing || existing.hostCompanyId !== hostCompanyId) {
+    return res.status(404).json({ error: '役員情報が見つかりません。' });
+  }
+  const name = (req.body.name ?? existing.name).toString().trim();
+  if (!name) return res.status(400).json({ errors: ['役員の氏名は必須です。'] });
+  const updated = await companyOfficers.update(officerId, {
+    hostCompanyId,
+    name,
+    title: (req.body.title ?? existing.title ?? '').toString().trim(),
+    address: (req.body.address ?? existing.address ?? '').toString().trim(),
+  });
+  res.json(updated);
+});
+
+router.delete('/:id/officers/:officerId', async (req, res) => {
+  const hostCompanyId = Number(req.params.id);
+  const officerId = Number(req.params.officerId);
+  const existing = await companyOfficers.get(officerId);
+  if (!existing || existing.hostCompanyId !== hostCompanyId) {
+    return res.status(404).json({ error: '役員情報が見つかりません。' });
+  }
+  await companyOfficers.remove(officerId);
   res.json({ ok: true });
 });
 

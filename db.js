@@ -49,7 +49,20 @@ const SCHEMA = `
     status TEXT NOT NULL DEFAULT 'lead',
     leadStage TEXT,
     bankAccountType TEXT,
-    bankAccountLast3 TEXT
+    bankAccountLast3 TEXT,
+    corporateNumber TEXT,
+    industryMajorCode TEXT,
+    industryMajorName TEXT,
+    industryMinorCode TEXT,
+    industryMinorName TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS company_officers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hostCompanyId INTEGER NOT NULL REFERENCES host_companies(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    title TEXT,
+    address TEXT
   );
 
   CREATE TABLE IF NOT EXISTS company_registrations (
@@ -114,7 +127,17 @@ const SCHEMA = `
     insuranceStatus TEXT,
     tokuteiTrainingStatus TEXT,
     tokuteiTrainingDate TEXT,
-    generation TEXT
+    generation TEXT,
+    wageType TEXT,
+    trainingAllowance INTEGER,
+    breakStartTime TEXT,
+    breakEndTime TEXT,
+    annualWorkingHours INTEGER,
+    weeklyAverageWorkingHours TEXT,
+    leaveInfo TEXT,
+    mealFee INTEGER,
+    housingFeeDeduction INTEGER,
+    otherFeeDeduction INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS worker_registrations (
@@ -137,7 +160,26 @@ const SCHEMA = `
     submittedDate TEXT,
     approvedDate TEXT,
     notes TEXT,
-    checklist TEXT
+    checklist TEXT,
+    applicationDate TEXT,
+    planCreationDate TEXT,
+    planType TEXT,
+    jobCategoryCode TEXT,
+    jobCategoryName TEXT,
+    workName TEXT,
+    jobCategoryFreeText TEXT,
+    trainingGoalType TEXT,
+    trainingGoalDetail TEXT,
+    priorStageGoalType TEXT,
+    priorStageGoalDetail TEXT,
+    priorApprovalNumber TEXT,
+    trainingPeriodStart TEXT,
+    trainingPeriodEnd TEXT,
+    orientationHours INTEGER,
+    practicalHours INTEGER,
+    remarks TEXT,
+    hasDifficultyNotification TEXT,
+    planGuidanceStaffName TEXT
   );
 
   CREATE TABLE IF NOT EXISTS visits_audits (
@@ -204,6 +246,8 @@ const MIGRATION_COLUMNS = {
     ['dormitoryRoomSizeOk', 'TEXT'], ['dormitoryHasLock', 'TEXT'], ['dormitoryHasValuablesStorage', 'TEXT'],
     ['dormitoryInfo', 'TEXT'], ['notes', 'TEXT'], ['leadStage', 'TEXT'],
     ['bankAccountType', 'TEXT'], ['bankAccountLast3', 'TEXT'],
+    ['corporateNumber', 'TEXT'], ['industryMajorCode', 'TEXT'], ['industryMajorName', 'TEXT'],
+    ['industryMinorCode', 'TEXT'], ['industryMinorName', 'TEXT'],
   ],
   workers: [
     ['personalNo', 'INTEGER'],
@@ -219,6 +263,19 @@ const MIGRATION_COLUMNS = {
     ['specialHealthChecks', 'TEXT'], ['consultationContact', 'TEXT'], ['insuranceStatus', 'TEXT'],
     ['tokuteiTrainingStatus', 'TEXT'], ['tokuteiTrainingDate', 'TEXT'],
     ['generation', 'TEXT'],
+    ['wageType', 'TEXT'], ['trainingAllowance', 'INTEGER'], ['breakStartTime', 'TEXT'],
+    ['breakEndTime', 'TEXT'], ['annualWorkingHours', 'INTEGER'], ['weeklyAverageWorkingHours', 'TEXT'],
+    ['leaveInfo', 'TEXT'], ['mealFee', 'INTEGER'], ['housingFeeDeduction', 'INTEGER'],
+    ['otherFeeDeduction', 'INTEGER'],
+  ],
+  application_cases: [
+    ['applicationDate', 'TEXT'], ['planCreationDate', 'TEXT'], ['planType', 'TEXT'],
+    ['jobCategoryCode', 'TEXT'], ['jobCategoryName', 'TEXT'], ['workName', 'TEXT'],
+    ['jobCategoryFreeText', 'TEXT'], ['trainingGoalType', 'TEXT'], ['trainingGoalDetail', 'TEXT'],
+    ['priorStageGoalType', 'TEXT'], ['priorStageGoalDetail', 'TEXT'], ['priorApprovalNumber', 'TEXT'],
+    ['trainingPeriodStart', 'TEXT'], ['trainingPeriodEnd', 'TEXT'], ['orientationHours', 'INTEGER'],
+    ['practicalHours', 'INTEGER'], ['remarks', 'TEXT'], ['hasDifficultyNotification', 'TEXT'],
+    ['planGuidanceStaffName', 'TEXT'],
   ],
   invoice_items: [
     ['taxCategory', 'TEXT'],
@@ -289,6 +346,7 @@ const hostCompanies = makeRepo('host_companies', [
   'dormitoryAddress', 'dormitoryMonthlyFee', 'dormitoryRoomSizeOk', 'dormitoryHasLock',
   'dormitoryHasValuablesStorage', 'dormitoryInfo', 'notes', 'status', 'leadStage',
   'bankAccountType', 'bankAccountLast3',
+  'corporateNumber', 'industryMajorCode', 'industryMajorName', 'industryMinorCode', 'industryMinorName',
 ]);
 
 const companyRegistrations = makeRepo('company_registrations', [
@@ -298,6 +356,17 @@ const companyRegistrations = makeRepo('company_registrations', [
 companyRegistrations.listByCompany = async (hostCompanyId) => {
   const rs = await client.execute({
     sql: 'SELECT * FROM company_registrations WHERE hostCompanyId = ? ORDER BY id',
+    args: [hostCompanyId],
+  });
+  return rs.rows.map((row) => ({ ...row }));
+};
+
+// 技能実習計画認定申請書 第2面「役員の氏名、役職名及び住所」用（会社ごとの役員一覧）
+const companyOfficers = makeRepo('company_officers', ['hostCompanyId', 'name', 'title', 'address']);
+
+companyOfficers.listByCompany = async (hostCompanyId) => {
+  const rs = await client.execute({
+    sql: 'SELECT * FROM company_officers WHERE hostCompanyId = ? ORDER BY id',
     args: [hostCompanyId],
   });
   return rs.rows.map((row) => ({ ...row }));
@@ -315,6 +384,8 @@ const workers = makeRepo('workers', [
   'workStartTime', 'workEndTime', 'holidays', 'payDate', 'overtimeRate', 'allowances', 'deductions',
   'educationWorkHistory', 'dormitoryInfo', 'healthCheckDate', 'specialHealthChecks',
   'consultationContact', 'insuranceStatus', 'tokuteiTrainingStatus', 'tokuteiTrainingDate', 'generation',
+  'wageType', 'trainingAllowance', 'breakStartTime', 'breakEndTime', 'annualWorkingHours',
+  'weeklyAverageWorkingHours', 'leaveInfo', 'mealFee', 'housingFeeDeduction', 'otherFeeDeduction',
 ]);
 
 const workerRegistrations = makeRepo('worker_registrations', [
@@ -331,6 +402,10 @@ workerRegistrations.listByWorker = async (workerId) => {
 
 const applicationCases = makeRepo('application_cases', [
   'workerId', 'statusType', 'stage', 'status', 'dueDate', 'submittedDate', 'approvedDate', 'notes', 'checklist',
+  'applicationDate', 'planCreationDate', 'planType', 'jobCategoryCode', 'jobCategoryName', 'workName',
+  'jobCategoryFreeText', 'trainingGoalType', 'trainingGoalDetail', 'priorStageGoalType', 'priorStageGoalDetail',
+  'priorApprovalNumber', 'trainingPeriodStart', 'trainingPeriodEnd', 'orientationHours', 'practicalHours',
+  'remarks', 'hasDifficultyNotification', 'planGuidanceStaffName',
 ]);
 
 const visitsAudits = makeRepo('visits_audits', [
@@ -387,6 +462,7 @@ module.exports = {
   sendingOrgs,
   hostCompanies,
   companyRegistrations,
+  companyOfficers,
   candidates,
   workers,
   workerRegistrations,
