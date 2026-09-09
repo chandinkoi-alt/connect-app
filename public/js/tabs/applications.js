@@ -44,7 +44,11 @@ const TabApplications = {
     const status = document.getElementById('filterStatus').value;
     const params = new URLSearchParams();
     if (status) params.set('status', status);
-    const cases = await api.get(`/api/application-cases?${params.toString()}`);
+    // 特定技能は技能実習計画認定申請書の対象外のため、過去データ等で万一
+    // 混ざっていても一覧には表示しない。
+    const cases = (await api.get(`/api/application-cases?${params.toString()}`)).filter(
+      (c) => c.statusType !== '特定技能'
+    );
     const tbody = document.getElementById('caseTableBody');
     if (!cases.length) {
       tbody.innerHTML = '<tr class="empty-row"><td colspan="9">申請案件が登録されていません。</td></tr>';
@@ -82,10 +86,19 @@ const TabApplications = {
 
   openEditForm(item) {
     const isEdit = !!item;
-    const workerOptions = this.workers
+    // 技能実習計画認定申請書は技能実習・育成就労のみ対象で、特定技能では不要な
+    // 手続きのため、対象者・制度区分の候補から特定技能を除く（既存データの
+    // 編集で特定技能が選ばれている場合はそのまま維持できるよう残す）。
+    const selectableWorkers = this.workers.filter(
+      (w) => w.statusType !== '特定技能' || (item && item.workerId === w.id)
+    );
+    const workerOptions = selectableWorkers
       .map((w) => `<option value="${w.id}" ${item && item.workerId === w.id ? 'selected' : ''}>${w.personalNo ? 'No.' + w.personalNo + ' ' : ''}${escapeHtml(w.name)}（${escapeHtml(w.companyName)}）</option>`)
       .join('');
-    const statusTypeOptions = this.statusTypes
+    const selectableStatusTypes = this.statusTypes.filter(
+      (s) => s !== '特定技能' || (item && item.statusType === s)
+    );
+    const statusTypeOptions = selectableStatusTypes
       .map((s) => `<option value="${s}" ${item && item.statusType === s ? 'selected' : ''}>${s}</option>`)
       .join('');
     const statusOptions = this.statuses

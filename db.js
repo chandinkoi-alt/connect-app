@@ -28,6 +28,7 @@ const SCHEMA = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     companyNo INTEGER,
     name TEXT NOT NULL,
+    nameKana TEXT,
     industry TEXT,
     address TEXT,
     contactPerson TEXT,
@@ -238,7 +239,7 @@ const MIGRATION_COLUMNS = {
     ['mouSignedDate', 'TEXT'], ['mouExpiryDate', 'TEXT'],
   ],
   host_companies: [
-    ['companyNo', 'INTEGER'],
+    ['companyNo', 'INTEGER'], ['nameKana', 'TEXT'],
     ['industry', 'TEXT'], ['address', 'TEXT'], ['contactPerson', 'TEXT'], ['phone', 'TEXT'],
     ['email', 'TEXT'], ['acceptanceStartDate', 'TEXT'], ['representativeName', 'TEXT'],
     ['regularEmployeeCount', 'INTEGER'], ['trainingManagerName', 'TEXT'], ['skillInstructor', 'TEXT'],
@@ -341,7 +342,7 @@ const sendingOrgs = makeRepo('sending_organizations', [
 ]);
 
 const hostCompanies = makeRepo('host_companies', [
-  'companyNo', 'name', 'industry', 'address', 'contactPerson', 'phone', 'email', 'acceptanceStartDate',
+  'companyNo', 'name', 'nameKana', 'industry', 'address', 'contactPerson', 'phone', 'email', 'acceptanceStartDate',
   'representativeName', 'regularEmployeeCount', 'trainingManagerName', 'skillInstructor', 'lifeInstructor',
   'dormitoryAddress', 'dormitoryMonthlyFee', 'dormitoryRoomSizeOk', 'dormitoryHasLock',
   'dormitoryHasValuablesStorage', 'dormitoryInfo', 'notes', 'status', 'leadStage',

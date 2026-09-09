@@ -343,7 +343,14 @@ const TabCompanies = {
       `
       <form id="companyForm">
         <div class="form-row">
-          <div class="form-group"><label>企業名 *</label><input id="f_name" required value="${company ? escapeHtml(company.name) : ''}"></div>
+          <div class="form-group">
+            <label>企業名 *</label>
+            <input id="f_name" required placeholder="株式会社〇〇建設" value="${company ? escapeHtml(company.name) : ''}">
+            <small class="field-hint">認定申請書等の公的書類に使うため、「株式会社」「有限会社」等を省略せず正式名称で入力してください。</small>
+          </div>
+          <div class="form-group"><label>企業名フリガナ</label><input id="f_nameKana" placeholder="カブシキガイシャ〇〇ケンセツ" value="${company ? escapeHtml(company.nameKana) : ''}"></div>
+        </div>
+        <div class="form-row">
           <div class="form-group"><label>業種</label><input id="f_industry" value="${company ? escapeHtml(company.industry) : ''}"></div>
         </div>
         <div class="form-group"><label>所在地</label><textarea id="f_address" rows="2" placeholder="本社と送付先など2件ある場合は改行で分けて入力できます">${company ? escapeHtml(company.address) : ''}</textarea></div>
@@ -407,6 +414,7 @@ const TabCompanies = {
       const val = (id) => document.getElementById(id).value;
       const body = {
         name: val('f_name'),
+        nameKana: val('f_nameKana'),
         industry: val('f_industry'),
         address: val('f_address'),
         contactPerson: val('f_contactPerson'),

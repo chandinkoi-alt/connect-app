@@ -39,6 +39,7 @@ function buildRecord(body, existing = {}) {
     // （データ補正など、企業№自体を修正する必要があるケースのため）。
     companyNo: body.companyNo !== undefined ? (body.companyNo === null || body.companyNo === '' ? null : Number(body.companyNo)) : existing.companyNo ?? null,
     name: (body.name || '').trim(),
+    nameKana: (body.nameKana || '').trim(),
     industry: (body.industry || '').trim(),
     address: (body.address || '').trim(),
     contactPerson: (body.contactPerson || '').trim(),
