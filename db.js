@@ -233,6 +233,14 @@ const SCHEMA = `
     amount INTEGER NOT NULL DEFAULT 0,
     taxCategory TEXT NOT NULL DEFAULT 'taxable'
   );
+
+  -- ログインセッション保存用（express-sessionのデフォルトMemoryStoreは
+  -- サーバー再起動のたびに全ログインが切れてしまうため、DBに永続化する）
+  CREATE TABLE IF NOT EXISTS sessions (
+    sid TEXT PRIMARY KEY,
+    sess TEXT NOT NULL,
+    expiresAt INTEGER NOT NULL
+  );
 `;
 
 // 既存の本番データベース（Turso）にはこれらの列が無い可能性があるため、
