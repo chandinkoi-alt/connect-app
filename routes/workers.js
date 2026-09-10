@@ -259,26 +259,155 @@ router.delete('/:id/registrations/:regId', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Excel取り込み（lib/excelImport.js）でこのアプリに取り込んだ際、元の
+// 「監理外国人名簿」シートの列のうち専用項目を持たないもの（面接日・受入後講習・
+// 監理終了日・退職理由・日本語検定・特定技能起算日・元データ在留資格表記・備考）は
+// 「ラベル: 値」の形で notes 欄に1行ずつまとめて保存している。名簿として出力し直す際、
+// ここから該当行を抜き出して元の列へ戻す。
+function extractNoteField(notes, label) {
+  if (!notes) return '';
+  const m = notes.match(new RegExp(`^${label}:\\s*(.*)$`, 'm'));
+  return m ? m[1].trim() : '';
+}
+
+function parseIsoDate(s) {
+  return s && /^\d{4}-\d{2}-\d{2}/.test(s) ? new Date(s) : null;
+}
+
+function calcAge(dob) {
+  const d = parseIsoDate(dob);
+  if (!d) return '';
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  if (today.getMonth() < d.getMonth() || (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())) age--;
+  return age;
+}
+
+// 元の名簿の③列（終/未/在）。失踪は退職理由列で表すため、区分としては
+// 「終」（管理終了）扱いにする。
+function stageToLetter(stage) {
+  if (stage === '帰国済み' || stage === '失踪') return '終';
+  if (stage === '準備中') return '未';
+  if (stage === '就労中') return '在';
+  return '';
+}
+
+function statusTypeToCode(statusType) {
+  return statusType === '特定技能' ? '特定' : '実習生';
+}
+
+// 取り込み元に無かった新規対象者（notesに「元データ在留資格表記」が無い）の場合、
+// 在留資格（visaType）から簡易的に号数だけを再現する。
+function visaStageFallback(visaType) {
+  const m = (visaType || '').match(/([1-3])号/);
+  if (!m) return '';
+  return '１２３'[Number(m[1]) - 1] + '号';
+}
+
 router.get('/export/roster', async (req, res) => {
+  const [rosterRows, allRegistrations, allCompanies] = await Promise.all([
+    withJoinsAll(await workers.list()),
+    workerRegistrations.list(),
+    hostCompanies.list(),
+  ]);
+  const regsByWorker = new Map();
+  for (const reg of allRegistrations) {
+    if (!regsByWorker.has(reg.workerId)) regsByWorker.set(reg.workerId, []);
+    regsByWorker.get(reg.workerId).push(reg);
+  }
+  // joinWorker はcompanyNameのみ付与するため、企業№は別途ここで引く。
+  const companyById = new Map(allCompanies.map((c) => [c.id, c]));
+
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('名簿');
-  sheet.columns = [
-    { header: '氏名', key: 'name', width: 20 },
-    { header: 'フリガナ', key: 'nameKana', width: 20 },
-    { header: '国籍', key: 'nationality', width: 12 },
-    { header: '制度区分', key: 'statusType', width: 12 },
-    { header: '在留資格', key: 'visaType', width: 14 },
-    { header: '在留期限', key: 'visaExpiryDate', width: 14 },
-    { header: '受入企業', key: 'companyName', width: 22 },
-    { header: '送出機関', key: 'sendingOrgName', width: 20 },
-    { header: '職種・作業', key: 'jobCategory', width: 22 },
-    { header: 'ステータス', key: 'currentStage', width: 12 },
-    { header: '電話番号', key: 'phone', width: 16 },
-    { header: '備考', key: 'notes', width: 24 },
+  const sheet = workbook.addWorksheet('監理外国人名簿');
+
+  sheet.getCell('A2').value = '更新日：';
+  sheet.getCell('B2').value = new Date();
+  sheet.getCell('B2').numFmt = 'yyyy/mm/dd';
+  sheet.getCell('O2').value = '3カ月前 赤';
+  sheet.getCell('O2').font = { color: { argb: 'FFFF0000' } };
+
+  const headers = [
+    '企業№', '企業名', '', '個人連番', '実習生氏名（カナ）', '実習生氏名', '生年月日', '年齢', '性別',
+    '国籍', '送出', '種別', '在留資格', '受入後講習', '在留期限', '総合保険', '職別', '作業名', '監理',
+    '面接日', '入国日', '配属日', '建設ｷｬﾘｱｱｯﾌﾟ\nCCUP', '備考', '監理終了日', '退職理由', '日本語\n検定',
+    '特定技能\n起算日', '特定技能\n経過年数',
   ];
-  sheet.getRow(1).font = { bold: true };
-  const rosterRows = await withJoinsAll(await workers.list());
-  rosterRows.forEach((w) => sheet.addRow(w));
+  const headerRow = sheet.getRow(3);
+  headers.forEach((h, i) => {
+    const c = headerRow.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } };
+    c.alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
+  });
+  headerRow.height = 30;
+
+  const widths = [6, 22, 4, 8, 18, 18, 12, 6, 6, 10, 8, 8, 10, 12, 12, 10, 10, 16, 8, 12, 12, 12, 12, 22, 12, 12, 8, 12, 10];
+  widths.forEach((w, i) => {
+    sheet.getColumn(i + 1).width = w;
+  });
+
+  let r = 4;
+  for (const w of rosterRows) {
+    const regs = regsByWorker.get(w.id) || [];
+    const insurance = regs.find((x) => x.label === '技能実習生総合保険');
+    const ccup = regs.find((x) => x.label === '建設キャリアアップカード');
+    const row = sheet.getRow(r);
+
+    const company = w.hostCompanyId ? companyById.get(w.hostCompanyId) : null;
+    row.getCell(1).value = (company && company.companyNo) || '';
+    row.getCell(2).value = w.companyName || '';
+    row.getCell(3).value = stageToLetter(w.currentStage);
+    row.getCell(4).value = w.personalNo || '';
+    row.getCell(5).value = w.nameKana || '';
+    row.getCell(6).value = w.name || '';
+    const dob = parseIsoDate(w.dob);
+    if (dob) {
+      row.getCell(7).value = dob;
+      row.getCell(7).numFmt = 'yyyy/mm/dd';
+    }
+    row.getCell(8).value = calcAge(w.dob);
+    row.getCell(9).value = w.gender || '';
+    row.getCell(10).value = w.nationality || '';
+    row.getCell(12).value = statusTypeToCode(w.statusType);
+    row.getCell(13).value = extractNoteField(w.notes, '元データ在留資格表記') || visaStageFallback(w.visaType);
+    row.getCell(14).value = extractNoteField(w.notes, '受入後講習');
+    const visaExpiry = parseIsoDate(w.visaExpiryDate);
+    if (visaExpiry) {
+      const c = row.getCell(15);
+      c.value = visaExpiry;
+      c.numFmt = 'yyyy/mm/dd';
+      if (w.visaStatus.level === 'expired' || w.visaStatus.level === 'warning') {
+        c.font = { color: { argb: 'FFFF0000' } };
+      }
+    }
+    const insuranceExpiry = insurance ? parseIsoDate(insurance.expiryDate) : null;
+    if (insuranceExpiry) {
+      row.getCell(16).value = insuranceExpiry;
+      row.getCell(16).numFmt = 'yyyy/mm/dd';
+    }
+    row.getCell(18).value = w.jobCategory || '';
+    row.getCell(19).value = 'ｺﾈｸﾄ';
+    row.getCell(20).value = extractNoteField(w.notes, '面接日');
+    const entryDate = parseIsoDate(w.entryDate);
+    if (entryDate) {
+      row.getCell(21).value = entryDate;
+      row.getCell(21).numFmt = 'yyyy/mm/dd';
+    }
+    const trainingStartDate = parseIsoDate(w.trainingStartDate);
+    if (trainingStartDate) {
+      row.getCell(22).value = trainingStartDate;
+      row.getCell(22).numFmt = 'yyyy/mm/dd';
+    }
+    row.getCell(23).value = ccup ? ccup.registrationNumber : '';
+    row.getCell(24).value = extractNoteField(w.notes, '備考');
+    row.getCell(25).value = extractNoteField(w.notes, '監理終了日');
+    row.getCell(26).value = extractNoteField(w.notes, '退職理由') || (w.currentStage === '失踪' ? '失踪' : '');
+    row.getCell(27).value = extractNoteField(w.notes, '日本語検定');
+    row.getCell(28).value = extractNoteField(w.notes, '特定技能起算日');
+    r++;
+  }
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename=meibo.xlsx');
