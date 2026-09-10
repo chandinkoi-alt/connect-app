@@ -53,16 +53,31 @@ function joinCase(appCase, workerById, companyById) {
   };
 }
 
-// 一覧の並び順：認定済み（対応不要）は末尾へ。それ以外は、期限（未入力なら
-// 在留期限からの目安期限）が近い・過ぎているものほど上に来るようにする。
+// 一覧の並び順：①まだ対応が必要なもの（書類準備中・追加書類対応中）を
+// 期限が近い・過ぎている順に上へ、②提出済み（OTIT側の審査待ちで、当団体側の
+// 対応は完了）、③認定済み（完了）の順にグループ分けする。提出済みになった
+// 案件は、実際の提出期限が過ぎていても「対応不要」として扱い、赤い警告を
+// 出し続けない（他のスタッフが見て、既に対応済みだと分かるようにするため）。
+function casePriorityGroup(status) {
+  if (status === '認定済み') return 2;
+  if (status === '提出済み') return 1;
+  return 0;
+}
+
 function compareCaseUrgency(a, b) {
-  const aDone = a.status === '認定済み';
-  const bDone = b.status === '認定済み';
-  if (aDone !== bDone) return aDone ? 1 : -1;
-  if (a.urgencyDays === null && b.urgencyDays === null) return 0;
-  if (a.urgencyDays === null) return 1;
-  if (b.urgencyDays === null) return -1;
-  return a.urgencyDays - b.urgencyDays;
+  const ga = casePriorityGroup(a.status);
+  const gb = casePriorityGroup(b.status);
+  if (ga !== gb) return ga - gb;
+  if (ga === 0) {
+    if (a.urgencyDays === null && b.urgencyDays === null) return 0;
+    if (a.urgencyDays === null) return 1;
+    if (b.urgencyDays === null) return -1;
+    return a.urgencyDays - b.urgencyDays;
+  }
+  // 提出済み・認定済みグループ内は、直近の動き（提出日／認定日）が新しい順
+  const aDate = a.submittedDate || a.approvedDate || '';
+  const bDate = b.submittedDate || b.approvedDate || '';
+  return bDate.localeCompare(aDate);
 }
 
 async function withJoins(appCase) {

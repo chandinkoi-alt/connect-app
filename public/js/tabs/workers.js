@@ -89,7 +89,7 @@ const TabWorkers = {
       return aInactive === bInactive ? 0 : aInactive ? 1 : -1;
     });
 
-    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown', muted: 'badge-muted' };
+    const badgeClass = { ok: 'badge-ok', warning: 'badge-warning', expired: 'badge-expired', unknown: 'badge-unknown', muted: 'badge-muted', submitted: 'badge-submitted' };
     tbody.innerHTML = workers
       .map((w) => {
         const s = w.visaStatus;
@@ -97,6 +97,9 @@ const TabWorkers = {
           s.days === null || s.level === 'muted' ? '' : s.days < 0 ? `（${Math.abs(s.days)}日超過）` : `（残り${s.days}日）`;
         const isInactive = INACTIVE_STAGES.includes(w.currentStage);
         const stageBadgeClass = w.currentStage === '失踪' ? 'badge-expired' : isInactive ? 'badge-muted' : 'badge-ok';
+        // 更新手続きの提出済みマークは、在留期限が近い・過ぎている（またはマーク済み）
+        // 就労中の対象者にのみ表示する。
+        const canToggleRenewal = w.currentStage === '就労中' && ['warning', 'expired', 'submitted'].includes(s.level);
         return `
         <tr class="${isInactive ? 'row-dimmed' : ''}">
           <td>${w.personalNo ?? '－'}</td>
@@ -111,6 +114,7 @@ const TabWorkers = {
           <td><span class="badge ${stageBadgeClass}">${escapeHtml(w.currentStage) || '－'}</span></td>
           <td><span class="badge ${badgeClass[s.level]}">${s.label}${daysLabel}</span></td>
           <td class="row-actions">
+            ${canToggleRenewal ? `<button class="link-btn" data-id="${w.id}" data-action="toggle-renewal">${w.visaRenewalSubmittedDate ? '手続き済み解除' : '更新手続き済みにする'}</button>` : ''}
             <button class="link-btn link-edit" data-id="${w.id}" data-action="edit">編集</button>
             <button class="link-btn link-doc" data-id="${w.id}" data-action="doc">書類</button>
             <button class="link-btn link-delete" data-id="${w.id}" data-action="delete">削除</button>
@@ -126,11 +130,15 @@ const TabWorkers = {
       });
     });
     tbody.querySelectorAll('button[data-action]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = Number(btn.dataset.id);
         if (btn.dataset.action === 'edit') this.openEditForm(workers.find((w) => w.id === id));
         else if (btn.dataset.action === 'doc') window.location.href = `/api/workers/${id}/document`;
-        else this.remove(id);
+        else if (btn.dataset.action === 'toggle-renewal') {
+          const w = workers.find((x) => x.id === id);
+          await api.put(`/api/workers/${id}/visa-renewal`, { submitted: !w.visaRenewalSubmittedDate });
+          await this.load();
+        } else this.remove(id);
       });
     });
   },
