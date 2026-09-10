@@ -529,6 +529,17 @@ textarea:focus {
   font-family: var(--font-jp);
 }
 
+.alert-info {
+  padding: 10px 12px;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius-sm);
+  color: #3730a3;
+  font-size: 12px;
+  margin-bottom: 12px;
+  font-family: var(--font-jp);
+}
+
 /* ---------- Filters / tables ---------- */
 
 .filter-bar {

@@ -227,6 +227,10 @@ const TabApplications = {
           <div class="form-group"><label>提出日</label><input id="f_submittedDate" type="date" value="${item ? item.submittedDate || '' : ''}"></div>
           <div class="form-group"><label>認定日</label><input id="f_approvedDate" type="date" value="${item ? item.approvedDate || '' : ''}"></div>
         </div>
+        <div class="form-group">
+          <label>認定番号 <span class="field-hint">認定済みになったらOTITから付与される番号を記入してください。次の号（2号・3号）の申請案件を作る際、前段階の目標達成状況欄へ自動的に引き継がれます。</span></label>
+          <input id="f_approvalNumber" value="${item ? escapeHtml(item.approvalNumber) : ''}">
+        </div>
         <div class="form-group"><label>備考</label><input id="f_notes" value="${item ? escapeHtml(item.notes) : ''}"></div>
 
         <div id="ninteiSection">${ninteiHtml}</div>
@@ -333,6 +337,61 @@ const TabApplications = {
     document.getElementById('f_planType').addEventListener('change', toggleTrainingSchedule);
     toggleTrainingSchedule();
 
+    // 新規登録時、対象者を1名だけ選んだ場合は、その対象者の直近の申請案件
+    // （1号→2号→3号 の更新など）から、職種・計画指導担当者・使用する素材/機械、
+    // 前段階の目標達成状況を自動的に引き継ぐ（既に入力済みの欄は上書きしない）。
+    // 制度区分も、前回がA・Bなら次はB・C、D・Eなら次はE・Fを自動選択する。
+    if (!isEdit) {
+      const PLAN_PROGRESSION = { A: 'B', B: 'C', D: 'E', E: 'F' };
+      const setIfEmpty = (id, value) => {
+        const el = document.getElementById(id);
+        if (el && !el.value && value) el.value = value;
+      };
+      const autoFillFromPreviousCase = async () => {
+        const checked = Array.from(document.querySelectorAll('.worker-checkbox:checked'));
+        if (checked.length !== 1) return;
+        const workerId = checked[0].value;
+        let prevCases;
+        try {
+          prevCases = await api.get(`/api/application-cases?workerId=${workerId}`);
+        } catch {
+          return;
+        }
+        if (!prevCases.length) return;
+        const latest = prevCases.reduce((a, b) => (b.id > a.id ? b : a));
+
+        setIfEmpty('f_jobCategoryCode', latest.jobCategoryCode);
+        setIfEmpty('f_jobCategoryName', latest.jobCategoryName);
+        setIfEmpty('f_workName', latest.workName);
+        setIfEmpty('f_jobCategoryFreeText', latest.jobCategoryFreeText);
+        setIfEmpty('f_planGuidanceStaffName', latest.planGuidanceStaffName);
+        setIfEmpty('f_trainingMaterials', latest.trainingMaterials);
+        setIfEmpty('f_trainingTools', latest.trainingTools);
+        // 前段階（今回作る案件から見て1つ前の号）の目標達成状況として、
+        // 直近の案件自体の目標・認定番号を引き継ぐ。
+        setIfEmpty('f_priorStageGoalType', latest.trainingGoalType);
+        setIfEmpty('f_priorStageGoalDetail', latest.trainingGoalDetail);
+        setIfEmpty('f_priorApprovalNumber', latest.approvalNumber);
+
+        const planTypeSelect = document.getElementById('f_planType');
+        if (planTypeSelect && !planTypeSelect.value && PLAN_PROGRESSION[latest.planType]) {
+          planTypeSelect.value = PLAN_PROGRESSION[latest.planType];
+          planTypeSelect.dispatchEvent(new Event('change'));
+        }
+
+        const el = document.getElementById('formErrors');
+        if (el) {
+          el.textContent = `${escapeHtml(checked[0].closest('label').textContent.trim())} の前回の申請案件の内容を一部反映しました。内容をご確認ください。`;
+          el.classList.remove('alert-error');
+          el.classList.add('alert-info');
+          el.hidden = false;
+        }
+      };
+      document.querySelectorAll('.worker-checkbox').forEach((cb) => {
+        cb.addEventListener('change', autoFillFromPreviousCase);
+      });
+    }
+
     document.getElementById('caseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const val = (id) => document.getElementById(id).value;
@@ -344,6 +403,8 @@ const TabApplications = {
         workerIds = Array.from(document.querySelectorAll('.worker-checkbox:checked')).map((cb) => cb.value);
         if (!workerIds.length) {
           const el = document.getElementById('formErrors');
+          el.classList.remove('alert-info');
+          el.classList.add('alert-error');
           el.textContent = '対象者を1名以上選択してください。';
           el.hidden = false;
           return;
@@ -357,6 +418,7 @@ const TabApplications = {
         dueDate: val('f_dueDate'),
         submittedDate: val('f_submittedDate'),
         approvedDate: val('f_approvedDate'),
+        approvalNumber: val('f_approvalNumber'),
         notes: val('f_notes'),
         planType: val('f_planType'),
         planGuidanceStaffName: val('f_planGuidanceStaffName'),
@@ -401,6 +463,8 @@ const TabApplications = {
         await this.load();
       } catch (err) {
         const el = document.getElementById('formErrors');
+        el.classList.remove('alert-info');
+        el.classList.add('alert-error');
         el.textContent = err.message || formatErrors(err);
         el.hidden = false;
       }
