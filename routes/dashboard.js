@@ -84,7 +84,9 @@ async function buildTasks() {
   }
 
   for (const c of allCases) {
-    if (!c.dueDate || c.status === '認定済み' || !activeWorkerIds.has(c.workerId)) continue;
+    // 提出済み・認定済みは当団体側の対応が完了しているため、期限が過ぎていても
+    // 対応不要なタスクとしては出さない。
+    if (!c.dueDate || c.status === '認定済み' || c.status === '提出済み' || !activeWorkerIds.has(c.workerId)) continue;
     const urgency = getUrgency(getDaysUntil(c.dueDate));
     if (urgency.level === 'expired' || urgency.level === 'warning') {
       const worker = workerById.get(c.workerId);

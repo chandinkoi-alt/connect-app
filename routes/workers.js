@@ -55,6 +55,12 @@ function buildRecord(body, existing = {}) {
     residenceCardNumber: (body.residenceCardNumber || '').trim(),
     visaType: body.visaType || '',
     visaExpiryDate: body.visaExpiryDate || '',
+    // 在留期限そのものが変更された場合（更新完了で新しい期限が入力された等）は、
+    // 古い期限に対する「手続き済み」マークを引き継がない。
+    visaRenewalSubmittedDate:
+      body.visaExpiryDate !== undefined && body.visaExpiryDate !== existing.visaExpiryDate
+        ? ''
+        : (body.visaRenewalSubmittedDate ?? existing.visaRenewalSubmittedDate ?? ''),
     entryDate: body.entryDate || '',
     trainingStartDate: body.trainingStartDate || '',
     hostCompanyId: body.hostCompanyId ? Number(body.hostCompanyId) : null,
@@ -186,6 +192,17 @@ router.delete('/:id', async (req, res) => {
   const deleted = await workers.remove(Number(req.params.id));
   if (!deleted) return res.status(404).json({ error: '対象者が見つかりません。' });
   res.json({ ok: true });
+});
+
+// 在留期間更新等の手続きを「提出済み」としてマーク／解除する（一覧から1クリックで
+// 切り替えられるようにするための専用エンドポイント。他の必須項目の再入力は不要）。
+router.put('/:id/visa-renewal', async (req, res) => {
+  const id = Number(req.params.id);
+  const existing = await workers.get(id);
+  if (!existing) return res.status(404).json({ error: '対象者が見つかりません。' });
+  const submitted = !!req.body.submitted;
+  const visaRenewalSubmittedDate = submitted ? new Date().toISOString().slice(0, 10) : '';
+  res.json(await withJoins(await workers.update(id, { ...existing, visaRenewalSubmittedDate })));
 });
 
 // 登録・保険（対象者単位）

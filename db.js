@@ -99,6 +99,7 @@ const SCHEMA = `
     residenceCardNumber TEXT,
     visaType TEXT NOT NULL,
     visaExpiryDate TEXT NOT NULL,
+    visaRenewalSubmittedDate TEXT,
     entryDate TEXT,
     trainingStartDate TEXT,
     hostCompanyId INTEGER REFERENCES host_companies(id) ON DELETE SET NULL,
@@ -255,7 +256,7 @@ const MIGRATION_COLUMNS = {
     ['industryMinorCode', 'TEXT'], ['industryMinorName', 'TEXT'],
   ],
   workers: [
-    ['personalNo', 'INTEGER'],
+    ['personalNo', 'INTEGER'], ['visaRenewalSubmittedDate', 'TEXT'],
     ['nameKana', 'TEXT'], ['nationality', 'TEXT'], ['gender', 'TEXT'], ['dob', 'TEXT'],
     ['passportNumber', 'TEXT'], ['passportExpiryDate', 'TEXT'], ['residenceCardNumber', 'TEXT'],
     ['entryDate', 'TEXT'], ['trainingStartDate', 'TEXT'], ['hostCompanyId', 'INTEGER'],
@@ -384,7 +385,7 @@ const candidates = makeRepo('candidates', [
 
 const workers = makeRepo('workers', [
   'personalNo', 'name', 'nameKana', 'nationality', 'gender', 'dob', 'passportNumber', 'passportExpiryDate',
-  'residenceCardNumber', 'visaType', 'visaExpiryDate', 'entryDate', 'trainingStartDate',
+  'residenceCardNumber', 'visaType', 'visaExpiryDate', 'visaRenewalSubmittedDate', 'entryDate', 'trainingStartDate',
   'hostCompanyId', 'sendingOrgId', 'jobCategory', 'contractStartDate', 'contractEndDate', 'phone',
   'homeCountryAddress', 'notes', 'statusType', 'currentStage', 'baseSalary', 'workingHours',
   'workStartTime', 'workEndTime', 'holidays', 'payDate', 'overtimeRate', 'allowances', 'deductions',

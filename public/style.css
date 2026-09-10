@@ -729,6 +729,13 @@ tbody tr:last-child td {
   color: var(--color-text-subtle);
 }
 
+/* 提出済み・手続き中など「対応は済んでいて、先方の結果待ち」を示す
+   落ち着いた青（badge-ok の緑・badge-warning/expired の赤とは区別する）。 */
+.badge-submitted {
+  background-color: #eef2ff;
+  color: #4338ca;
+}
+
 /* 受入企業一覧の「重要期限」列: 36協定・責任者講習・建設業許可を縦に並べて表示する */
 .deadline-stack {
   display: flex;

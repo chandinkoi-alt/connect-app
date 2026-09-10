@@ -59,11 +59,16 @@ const TabApplications = {
       .map((c) => {
         const done = c.checklist.filter((i) => i.done).length;
         const isDone = c.status === '認定済み';
-        // 提出期限：入力済みならそのまま、未入力なら在留期限から算出した
+        const isSubmitted = c.status === '提出済み';
+        // 提出期限：提出済み・認定済みは既に当団体側の対応が完了しているため、
+        // 期限切れでも赤い警告は出さない（他のスタッフが見て対応済みと分かるように）。
+        // それ以外は、入力済みならそのまま、未入力なら在留期限から算出した
         // 目安期限（isEstimated）を「（目安）」付きで示す。どちらも無ければ「－」。
         let dueDateCell = '－';
         if (isDone) {
           dueDateCell = escapeHtml(c.dueDate) || '－';
+        } else if (isSubmitted) {
+          dueDateCell = `<span class="badge badge-submitted">提出済み${c.submittedDate ? '（' + escapeHtml(c.submittedDate) + '）' : ''}</span>`;
         } else if (c.dueDate) {
           dueDateCell = `<span class="badge badge-${c.urgencyLevel}">${escapeHtml(c.dueDate)}</span>`;
         } else if (c.isEstimated && c.effectiveDueDate) {
@@ -76,10 +81,11 @@ const TabApplications = {
           <td>${escapeHtml(c.companyName)}</td>
           <td>${escapeHtml(c.statusType)}</td>
           <td>${escapeHtml(c.stage) || '－'}</td>
-          <td><span class="badge badge-${c.status === '認定済み' ? 'ok' : c.status === '追加書類対応中' ? 'warning' : 'unknown'}">${escapeHtml(c.status)}</span></td>
+          <td><span class="badge badge-${c.status === '認定済み' ? 'ok' : c.status === '追加書類対応中' ? 'warning' : c.status === '提出済み' ? 'submitted' : 'unknown'}">${escapeHtml(c.status)}</span></td>
           <td>${dueDateCell}</td>
           <td>${done}/${c.checklist.length}</td>
           <td class="row-actions">
+            ${!isDone && !isSubmitted ? `<button class="link-btn" data-id="${c.id}" data-action="mark-submitted">提出済みにする</button>` : ''}
             <button class="link-btn link-edit" data-id="${c.id}" data-action="edit">開く</button>
             <button class="link-btn link-delete" data-id="${c.id}" data-action="delete">削除</button>
           </td>
@@ -88,10 +94,14 @@ const TabApplications = {
       .join('');
 
     tbody.querySelectorAll('button[data-action]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = Number(btn.dataset.id);
         if (btn.dataset.action === 'edit') this.openEditForm(cases.find((c) => c.id === id));
-        else this.remove(id);
+        else if (btn.dataset.action === 'mark-submitted') {
+          const today = new Date().toISOString().slice(0, 10);
+          await api.put(`/api/application-cases/${id}`, { status: '提出済み', submittedDate: today });
+          await this.load();
+        } else this.remove(id);
       });
     });
   },
