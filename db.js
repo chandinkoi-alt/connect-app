@@ -160,6 +160,7 @@ const SCHEMA = `
     dueDate TEXT,
     submittedDate TEXT,
     approvedDate TEXT,
+    approvalNumber TEXT,
     notes TEXT,
     checklist TEXT,
     applicationDate TEXT,
@@ -280,7 +281,7 @@ const MIGRATION_COLUMNS = {
     ['trainingPeriodStart', 'TEXT'], ['trainingPeriodEnd', 'TEXT'], ['orientationHours', 'INTEGER'],
     ['practicalHours', 'INTEGER'], ['remarks', 'TEXT'], ['hasDifficultyNotification', 'TEXT'],
     ['planGuidanceStaffName', 'TEXT'], ['trainingMaterials', 'TEXT'], ['trainingTools', 'TEXT'],
-    ['trainingContentItems', 'TEXT'],
+    ['trainingContentItems', 'TEXT'], ['approvalNumber', 'TEXT'],
   ],
   invoice_items: [
     ['taxCategory', 'TEXT'],
@@ -406,7 +407,7 @@ workerRegistrations.listByWorker = async (workerId) => {
 };
 
 const applicationCases = makeRepo('application_cases', [
-  'workerId', 'statusType', 'stage', 'status', 'dueDate', 'submittedDate', 'approvedDate', 'notes', 'checklist',
+  'workerId', 'statusType', 'stage', 'status', 'dueDate', 'submittedDate', 'approvedDate', 'approvalNumber', 'notes', 'checklist',
   'applicationDate', 'planCreationDate', 'planType', 'jobCategoryCode', 'jobCategoryName', 'workName',
   'jobCategoryFreeText', 'trainingGoalType', 'trainingGoalDetail', 'priorStageGoalType', 'priorStageGoalDetail',
   'priorApprovalNumber', 'trainingPeriodStart', 'trainingPeriodEnd', 'orientationHours', 'practicalHours',

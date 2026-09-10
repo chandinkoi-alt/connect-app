@@ -84,6 +84,10 @@ function buildRecord(body, existing = {}) {
     dueDate: body.dueDate ?? existing.dueDate ?? '',
     submittedDate: body.submittedDate ?? existing.submittedDate ?? '',
     approvedDate: body.approvedDate ?? existing.approvedDate ?? '',
+    // 認定された後にOTITから付与される認定番号。次の号（2号・3号）の
+    // 申請案件を作る際、前段階の目標達成状況欄（priorApprovalNumber）へ
+    // 自動的に引き継ぐために保存しておく。
+    approvalNumber: (body.approvalNumber ?? existing.approvalNumber ?? '').toString().trim(),
     notes: (body.notes ?? existing.notes ?? '').toString().trim(),
     checklist: body.checklist
       ? JSON.stringify(body.checklist)
