@@ -40,3 +40,14 @@ services:
       # バックアップの保存先Google DriveフォルダのID（フォルダのURL末尾の文字列）。
       - key: GOOGLE_DRIVE_FOLDER_ID
         sync: false
+      # 一時的にアプリを閉じておきたい時のメンテナンスモード。true にすると
+      # /health 以外の全アクセスに「メンテナンス中」ページを返す（ログイン中の
+      # 人も含めて全員）。元に戻すには false にする（またはこの変数を削除）。
+      - key: MAINTENANCE_MODE
+        value: "false"
+      # メンテナンスモード中でも管理者だけがアクセスできるようにするための秘密
+      # トークン。ランダムな長い文字列を手動で設定する。設定後、対象のURLに
+      # ?bypass=<このトークン> を付けて一度アクセスすれば、以後はブラウザに
+      # Cookieが保存され、メンテナンス中でも通常通り使い続けられる。
+      - key: MAINTENANCE_BYPASS_TOKEN
+        sync: false

@@ -77,6 +77,16 @@ node server.js            # http://localhost:3000
 | `BACKUP_TOKEN` | 自動バックアップを使うなら必須 | `/api/admin/import/backup-auto` 等の認証用トークン |
 | `GOOGLE_SERVICE_ACCOUNT_KEY` / `GOOGLE_DRIVE_FOLDER_ID` | Google Drive自動バックアップを使うなら必須 | サービスアカウントJSON鍵と保存先フォルダID |
 | `NODE_ENV` | 本番は `production` | Cookieの `secure` 属性等の切り替えに使用 |
+| `MAINTENANCE_MODE` | 任意 | `true` にすると、`/health` 以外の全アクセスに「メンテナンス中」ページを表示（ログイン中の人も含めて全員）。詳細は下記「メンテナンスモード」参照 |
+| `MAINTENANCE_BYPASS_TOKEN` | メンテナンスモードを使うなら推奨 | メンテナンス中でも管理者だけがアクセスできるようにする秘密トークン |
+
+## メンテナンスモード（一時的にアプリを閉じる）
+
+トラブル対応・大きなデータ入替などで一時的に全員のアクセスを止めたい時に使う。
+
+1. Renderの Environment で `MAINTENANCE_MODE` を `true` に設定（`MAINTENANCE_BYPASS_TOKEN` も未設定なら適当なランダム文字列を設定）→ 自動的に再デプロイされ、以後は誰がアクセスしても「メンテナンス中」ページが表示される（ログイン中の人も含む）
+2. 自分だけは使い続けたい場合、`https://<アプリのURL>/?bypass=<MAINTENANCE_BYPASS_TOKENの値>` に一度アクセスする → ブラウザにCookieが保存され、以後は通常通り使える
+3. 元に戻すには `MAINTENANCE_MODE` を `false` に変更（または変数自体を削除）
 
 ## デプロイ
 
