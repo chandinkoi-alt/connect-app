@@ -8,6 +8,7 @@ const { ready } = require('./db');
 const { buildBackupPayload, backupFilename } = require('./lib/backupData');
 const { uploadBackupToDrive } = require('./lib/googleDriveBackup');
 const { LibsqlSessionStore, pruneExpiredSessions } = require('./lib/sessionStore');
+const { maintenanceGate } = require('./lib/maintenanceMode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,10 @@ app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
+
+// MAINTENANCE_MODE=true の間、全アクセスにメンテナンス中ページを返す
+// （/health は除く）。MAINTENANCE_BYPASS_TOKEN を持つ人だけ迂回可能。
+app.use(maintenanceGate);
 
 app.use(
   session({
